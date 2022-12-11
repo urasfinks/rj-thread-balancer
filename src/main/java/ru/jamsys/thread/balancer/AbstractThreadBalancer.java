@@ -99,6 +99,11 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     }
 
     @Override
+    public void setResistance(int prc) {
+        //Для того, что бы не надо было реализовывать в Consumer
+    }
+
+    @Override
     public void shutdown() throws ShutdownException {
         Util.logConsole(Thread.currentThread(), "TO SHUTDOWN");
         scheduler.shutdown();

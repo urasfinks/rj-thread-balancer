@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Consumer<Message>, SchedulerTick {
+public class ThreadBalancerConsumer extends AbstractThreadBalancer implements SchedulerTick {
 
     private Consumer<Message> consumer;
     private final ConcurrentLinkedDeque<Message> queueTask = new ConcurrentLinkedDeque<>();
@@ -38,7 +38,6 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Co
         }
     }
 
-    @Override
     public void accept(Message message) throws ShutdownException, TpsOverflowException {
         if (!isActive()) {
             throw new ShutdownException("Consumer shutdown");

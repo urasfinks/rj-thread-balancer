@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Supplier<Message>, Consumer<Message>, SchedulerTick {
+public class ThreadBalancerSupplier extends AbstractThreadBalancer implements SchedulerTick {
 
     private Supplier<Message> supplier;
     private Consumer<Message> consumer;
@@ -82,7 +82,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Su
         while (isActive() && wrapThread.getIsRun().get() && !isLimitTpsInputOverflow()) {
             incTpsInput();
             long startTime = System.currentTimeMillis();
-            Message message = get();
+            Message message = supplier.get();
             if (message != null) {
                 incTpsOutput(System.currentTimeMillis() - startTime);
                 message.onHandle(MessageHandle.CREATE, this);
@@ -93,11 +93,6 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Su
                 break;
             }
         }
-    }
-
-    @Override
-    public Message get() {
-        return supplier.get();
     }
 
     public static int getNeedCountThread(@NonNull ThreadBalancerStatistic stat, int tpsInputMax, boolean debug) {
@@ -138,8 +133,4 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Su
         return needThread;
     }
 
-    @Override
-    public void accept(Message message) {
-
-    }
 }
