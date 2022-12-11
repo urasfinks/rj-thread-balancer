@@ -21,7 +21,7 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
             try {
                 ThreadBalancerFactory threadBalancerFactory = getThreadBalancerFactory();
                 if (threadBalancerFactory != null) {
-                    List<Object> objects = Util.forEach(ThreadBalancer.toArraySblService(threadBalancerFactory.getListService()), getHandler());
+                    List<Object> objects = Util.forEach(ThreadBalancer.toArrayThreadBalancer(threadBalancerFactory.getListService()), getHandler());
                     Consumer<Object> handler = getResultHandler();
                     if (handler != null) {
                         handler.accept(objects);

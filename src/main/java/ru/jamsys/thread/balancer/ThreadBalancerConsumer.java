@@ -70,15 +70,15 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Co
     }
 
     @Override
-    public ThreadBalancerStatistic statistic() {
+    public ThreadBalancerStatistic flushStatistic() {
         getStatLast().setQueueSize(queueTask.size());
-        return super.statistic();
+        return super.flushStatistic();
     }
 
     @Override
     public void threadStabilizer() {
         try {
-            ThreadBalancerStatistic stat = getStatClone();
+            ThreadBalancerStatistic stat = getStatistic();
             if (stat != null) {
                 if (debug) {
                     Util.logConsole(Thread.currentThread(), "QueueSize: " + stat.getQueueSize() + "; CountThread: " + stat.getThreadCount());

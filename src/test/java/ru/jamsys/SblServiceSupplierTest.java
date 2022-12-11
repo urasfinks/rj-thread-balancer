@@ -59,7 +59,7 @@ class SblServiceSupplierTest {
         test.setDebug(false);
         test.setTpsInputMax(maxTps);
         UtilTest.sleepSec(sleep);
-        ThreadBalancerStatistic clone = test.getStatClone();
+        ThreadBalancerStatistic clone = test.getStatistic();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null) {
             fnExpected.accept(clone);

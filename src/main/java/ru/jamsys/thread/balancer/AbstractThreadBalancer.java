@@ -53,7 +53,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
 
     @Override
     @Nullable
-    public ThreadBalancerStatistic getStatClone() {
+    public ThreadBalancerStatistic getStatistic() {
         return statLast.clone();
     }
 
@@ -86,7 +86,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     }
 
     @Override
-    public ThreadBalancerStatistic statistic() {
+    public ThreadBalancerStatistic flushStatistic() {
         statLast.setServiceName(getName());
         statLast.setTpsIdle(tpsIdle.getAndSet(0));
         statLast.setTpsInput(tpsInput.getAndSet(0));

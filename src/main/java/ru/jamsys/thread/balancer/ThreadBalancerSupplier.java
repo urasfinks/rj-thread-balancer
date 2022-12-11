@@ -43,7 +43,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Su
     @Override
     public void threadStabilizer() {
         try {
-            ThreadBalancerStatistic stat = getStatClone();
+            ThreadBalancerStatistic stat = getStatistic();
             if (stat != null) {
                 if (getThreadParkQueueSize() == 0) {//В очереди нет ждунов, значит все трудятся, накинем ещё
                     int needCountThread = formulaAddCountThread.apply(getThreadListSize());

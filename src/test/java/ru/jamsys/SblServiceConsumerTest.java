@@ -116,7 +116,7 @@ class SblServiceConsumerTest {
         Util.logConsole(Thread.currentThread(), "Init task thread");
         UtilTest.sleepSec(sleep);
         Assertions.assertEquals(realInsert.get(), serviceHandleCounter.get(), "Не все задачи были обработаны");
-        ThreadBalancerStatistic clone = test.getStatClone();
+        ThreadBalancerStatistic clone = test.getStatistic();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null) {
             fnExpected.accept(clone);

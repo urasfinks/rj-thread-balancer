@@ -5,30 +5,30 @@ import java.util.List;
 
 public interface ThreadBalancer {
 
-    ThreadBalancerStatistic statistic();
+    ThreadBalancerStatistic flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
 
-    void threadStabilizer();
+    ThreadBalancerStatistic getStatistic(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
 
-    String getName();
+    void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждые 2 секунды)
 
-    void iteration(WrapThread wrapThread, ThreadBalancer service);
+    String getName(); //Имя пула балансировки
 
-    void shutdown();
+    void iteration(WrapThread wrapThread, ThreadBalancer service); //Вызывается созданными потоками, для непосредственного вызова ваших функциональных блоков. Для вас это бесполезный метод
 
-    void setDebug(boolean b);
+    void shutdown(); // Потушить сервис, вызывается на завершении программы, надеюсь вам никогда не прийдётся его использовать, однако будте вкурсе - он потоко безопасный, вы можете получить исключения
 
-    ThreadBalancerStatistic getStatClone();
-
-    @SuppressWarnings("unused")
-    void incThreadMax();
+    void setDebug(boolean b); //Логировние в консоль отладочной информации
 
     @SuppressWarnings("unused")
-    void decThreadMax();
+    void incThreadMax(); //Увеличть в рантайме кол-во потоков (Крайне не советую вам такое делать)
 
-    void setTpsInputMax(int maxTps);
+    @SuppressWarnings("unused")
+    void decThreadMax(); //Уменьшить в рантайме кол-во потоков (Крайне не советую вам такое делать)
+
+    void setTpsInputMax(int maxTps); //Установить максимальный предел вызываемых блоков iteration (Я так же вам не советую этого делать)
 
     @SuppressWarnings("all")
-    public static ThreadBalancer[] toArraySblService(List<ThreadBalancer> l) throws Exception {
+    public static ThreadBalancer[] toArrayThreadBalancer(List<ThreadBalancer> l) throws Exception { // Маленька защита от конкуретных итераторов с измененеием (НЕ ПАНАЦЕЯ)
         return l.toArray(new ThreadBalancer[0]);
     }
 

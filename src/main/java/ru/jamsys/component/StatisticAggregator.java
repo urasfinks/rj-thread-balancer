@@ -62,7 +62,7 @@ public class StatisticAggregator extends AbstractThreadBalancerScheduler {
     @Override
     protected Function<ThreadBalancer, Object> getHandler() {
         return t -> {
-            ThreadBalancerStatistic r = t.statistic();
+            ThreadBalancerStatistic r = t.flushStatistic();
             return r == null ? null : r.clone();
         };
     }
