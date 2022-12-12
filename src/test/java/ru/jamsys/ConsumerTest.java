@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-class SblServiceConsumerTest {
+class ConsumerTest {
 
     static ConfigurableApplicationContext context;
 
@@ -33,15 +33,15 @@ class SblServiceConsumerTest {
 
     @Test
     void overclocking() { //Проверяем разгон потоков под рост задач
-        run(1, 5, 60000L, 2, 10, 10, -1, clone ->
+        run(1, 5, 60000L, 2, 10, 5, -1, clone ->
                 Assertions.assertEquals(5, clone.getThreadCount(), "Кол-во потоков должно быть 5")
         );
     }
 
     @Test
     void damping() { //Проверяем удаление потоков после ненадобности
-        run(1, 10, 6000L, 2, 10, 19, -1, clone ->
-                Assertions.assertEquals(5, clone.getThreadCount(), "Должен остаться только 5 потоков, так как по умолчаню 5 в парке остаются")
+        run(1, 10, 2000L, 2, 15, 10, -1, clone ->
+                Assertions.assertEquals(5, clone.getThreadCount(), "Должен остаться только 5 потоков")
         );
     }
 

@@ -11,15 +11,15 @@ import ru.jamsys.scheduler.SchedulerTick;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerSupplier extends AbstractThreadBalancer implements SchedulerTick {
+public class ThreadBalancerSupplier extends AbstractThreadBalancerShare implements SchedulerTick {
 
     private Supplier<Message> supplier;
     private Consumer<Message> consumer;
@@ -33,7 +33,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
     }
 
     @Setter
-    Function<Integer, Integer> formulaAddCountThread = (y) -> y;
+    Function<Integer, Integer> formulaAddCountThread = (need) -> need;
 
     @Override
     public void threadStabilizer() {
@@ -41,6 +41,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
             ThreadBalancerStatistic stat = getStatisticLastClone();
             if (stat != null) {
                 if (getThreadParkQueueSize() == 0) {//В очереди нет ждунов, значит все трудятся, накинем ещё
+                    //Такая идеалогия, что Supplier должен брать данные из какого-либо внешнего источника и нет возможности спросить, а сколько есть
                     int needCountThread = formulaAddCountThread.apply(getThreadListSize());
                     if (debug) {
                         Util.logConsole(Thread.currentThread(), "AddThread: " + needCountThread);
@@ -56,10 +57,6 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
         if (autoRestoreResistanceTps.get() && getResistancePercent().get() > 0) {
             getResistancePercent().decrementAndGet();
         }
-    }
-
-    @Override
-    public void tick() {
         //Чистим очередь сопротивления, что бы проще было считать максимальное показание
         //Очередь была сделана, так как несколько потоков могут паралельно закидывать информацию с просьбой уменьшить tps
         try {
@@ -67,6 +64,10 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void tick() {
         //При маленькой нагрузке дёргаем всегда последний тред, что бы не было простоев
         //Далее раскрутку оставляем на откуп стабилизатору
         if (isActive()) {
@@ -139,23 +140,24 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
     }
 
     @Override
-    public int setResistance(int prc) { //Закидывается процент торможения, изначально он 0
+    public int setResistance(int prc) { //Закидывается процент торможения, изначально он 0 и возвращается что сейчас установлено
         /*
          * Немного предистории:
          * В целом всю систему надо рассчитывать как посредника, есть INPUT нагрузка и OUTPUT разгрузка
          * Всё что мы взяли на себя - надо выполнить
          * INPUT и OUTPUT работают в своих собственных сбалансированных пулах, может случиться, что OUTPUT начнёт умирать
          * Поэтому OUTPUT будет трубить всем свом INPUT, что он не успевает, что бы они уменьшили свой tps
-         * Если OUTPUT моментально восстанавливаться, предусмотрено служебное восстановление (вычитание 1% за tick)
+         * Если OUTPUT моментально восстанавится, предусмотрено служебное восстановление (вычитание 1% за tick)
          * */
-        AtomicInteger resistancePercent = getResistancePercent();
-
         queueResistance.add(prc);
-        try {
-            resistancePercent.set(queueResistance.stream().reduce(Integer::max).orElse(0));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return resistancePercent.get();
+        Integer[] listValues = queueResistance.toArray(new Integer[0]);
+        int val = Arrays.stream(listValues).reduce(Integer::max).orElse(0);
+        getResistancePercent().set(val);
+        return val;
+    }
+
+    @Override
+    public int getNeedCountThreadRelease(ThreadBalancerStatistic stat) {
+        return 0;
     }
 }

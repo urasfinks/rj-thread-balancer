@@ -5,6 +5,7 @@ import org.springframework.context.ApplicationContext;
 import ru.jamsys.message.Message;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerConsumer;
+import ru.jamsys.thread.balancer.ThreadBalancerConsumer2;
 import ru.jamsys.thread.balancer.ThreadBalancerSupplier;
 
 import java.util.ArrayList;
@@ -28,6 +29,13 @@ public class ThreadBalancerFactory {
 
     public List<ThreadBalancer> getListService() {
         return new ArrayList<>(listService.values());
+    }
+
+    public ThreadBalancerConsumer2 createConsumer2(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, long schedulerSleepMillis) {
+        ThreadBalancerConsumer2 bean = context.getBean(ThreadBalancerConsumer2.class);
+        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
+        listService.put(name, bean);
+        return bean;
     }
 
     public ThreadBalancer createConsumer(String name, int countThreadMin, int countThreadMax, long keepAliveMillis, long schedulerSleepMillis, Consumer<Message> consumer) {

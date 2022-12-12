@@ -10,7 +10,7 @@ public interface ThreadBalancer {
 
     ThreadBalancerStatistic getStatisticLastClone(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
 
-    void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждые 2 секунды)
+    void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждую секунду)
 
     String getName(); //Имя пула балансировки
 
@@ -26,13 +26,13 @@ public interface ThreadBalancer {
 
     AtomicInteger getResistancePercent(); //Получить процент сопротивления
 
-    void setThreadParkMinimum(int threadParkMinimum);
-
     void setTestAutoRestoreResistanceTps(boolean status); //По умолчанию восстановление tps будет работать, метод только для тестов
 
     @SuppressWarnings("all")
     public static ThreadBalancer[] toArrayThreadBalancer(List<ThreadBalancer> l) throws Exception { // Маленька защита от конкуретных итераторов с измененеием (НЕ ПАНАЦЕЯ)
         return l.toArray(new ThreadBalancer[0]);
     }
+
+    int getNeedCountThreadRelease(ThreadBalancerStatistic stat); //Реализация по необходимости потоков
 
 }

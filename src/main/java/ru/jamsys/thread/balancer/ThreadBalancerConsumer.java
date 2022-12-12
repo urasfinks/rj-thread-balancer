@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerConsumer extends AbstractThreadBalancer implements SchedulerTick {
+public class ThreadBalancerConsumer extends AbstractThreadBalancerShare implements SchedulerTick {
 
     private Consumer<Message> consumer;
     private final ConcurrentLinkedDeque<Message> queueTask = new ConcurrentLinkedDeque<>();
@@ -65,6 +65,11 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Sc
                 }
             }
         }
+    }
+
+    @Override
+    public int getNeedCountThreadRelease(ThreadBalancerStatistic stat) {
+        return 0;
     }
 
     @Override
