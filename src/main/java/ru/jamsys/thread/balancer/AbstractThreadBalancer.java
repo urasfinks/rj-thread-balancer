@@ -51,28 +51,32 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
 
     private TickScheduler scheduler;
 
-    public ThreadBalancerStatistic getStatLast() {
+    public ThreadBalancerStatistic getStatisticLast() {
         return statLast;
     }
 
     @Override
     @Nullable
-    public ThreadBalancerStatistic getStatistic() {
+    public ThreadBalancerStatistic getStatisticLastClone() {
         return statLast.clone();
+    }
+
+    @Nullable
+    public ThreadBalancerStatistic getStatisticMomentum() {
+        ThreadBalancerStatistic curStat = new ThreadBalancerStatistic();
+        curStat.setServiceName(getName());
+        curStat.setTpsIdle(tpsIdle.get());
+        curStat.setTpsInput(tpsInput.get());
+        curStat.setTpsOutput(tpsOutput.get());
+        curStat.setThreadCount(threadList.size());
+        curStat.setThreadCountPark(threadParkQueue.size());
+        //Сумарная статистика дожна браться за более долгое время, поэтому просто копируем
+        curStat.setSumTimeTpsAvg(statLast.getSumTimeTpsAvg());
+        return curStat;
     }
 
     @Setter
     private int threadParkMinimum = 5;
-
-    protected ThreadBalancerStatistic getStatCurrent() {
-        ThreadBalancerStatistic curStat = new ThreadBalancerStatistic();
-        curStat.setServiceName(getName());
-        curStat.setTpsInput(tpsInput.get());//
-        curStat.setThreadCountPark(threadParkQueue.size());//
-        //Сумарная статистика дожна браться за более долгое время, поэтому просто копируем
-        curStat.setSumTimeTpsAvg(statLast.getSumTimeTpsAvg()); //
-        return curStat;
-    }
 
     @Setter
     protected boolean debug = false;
@@ -213,9 +217,13 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
                 //Так как последующая операция перед вставкой в очередь - блокировка
                 //Надо проверить, что поток припаркован (возможна гонка)
                 if (wrapThread.getThread().getState().equals(Thread.State.WAITING)) {
-                    wrapThread.setLastWakeUp(System.currentTimeMillis());
-                    LockSupport.unpark(wrapThread.getThread());
-                    break;
+                    try {
+                        wrapThread.setLastWakeUp(System.currentTimeMillis());
+                        LockSupport.unpark(wrapThread.getThread());
+                        break;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 } else { // Ещё статус не переключился, просто отбрасываем в начала очереди, к тем, кто ждёт ножа
                     threadParkQueue.addFirst(wrapThread);
                 }
@@ -266,19 +274,37 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     protected void removeThread(WrapThread wrapThread) {
         //Кол-во неприкасаемых потоков, которые должны быть на паркинге для подстраховки (Натуральное число)
         if (getThreadParkQueueSize() > threadParkMinimum && threadList.size() > threadCountMin) {
+            //System.out.println("RM condition: parkSize: " + getThreadParkQueueSize() + "; ThreadSize: " + threadList.size());
             forceRemoveThread(wrapThread);
         }
     }
 
-    synchronized private void forceRemoveThread(WrapThread wth) { //Этот метод может загасит сервис до конца, используйте обычный removeThread
-        WrapThread wrapThread = wth != null ? wth : threadList.get(0);
-        if (wrapThread != null) {
-            wrapThread.getIsRun().set(false);
-            LockSupport.unpark(wrapThread.getThread()); //Мы его оживляем, что бы он закончился
-            threadList.remove(wrapThread);
-            threadParkQueue.remove(wrapThread); // На всякий случай
-            if (debug) {
-                Util.logConsole(Thread.currentThread(), "removeThread: " + wrapThread);
+    synchronized private void forceRemoveThread(WrapThread wrapThread) { //Этот метод может загасит сервис до конца, используйте обычный removeThread
+        WrapThread curWrapThread = wrapThread != null ? wrapThread : threadList.get(0);
+        if (curWrapThread != null) {
+            int count = 0;
+            while (true) {
+                count++;
+                if (count > 3) {
+                    break;
+                }
+                try {
+                    curWrapThread.getIsRun().set(false);
+                    LockSupport.unpark(curWrapThread.getThread()); //Мы его оживляем, что бы он закончился
+                    threadList.remove(curWrapThread);
+                    threadParkQueue.remove(curWrapThread); // На всякий случай
+                    if (debug) {
+                        Util.logConsole(Thread.currentThread(), "removeThread: " + curWrapThread);
+                    }
+                    break;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    TimeUnit.MILLISECONDS.sleep(333);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -288,13 +314,13 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
             final long now = System.currentTimeMillis();
             //Хотелось, что бы удаление было 1 тред в секунду, но так как helper запускается раз в 2 секунды, то и удалять будем по 2
             final AtomicInteger c = new AtomicInteger(2);
-            Util.forEach(WrapThread.toArrayWrapThread(threadList), (wth) -> {
-                long future = wth.getLastWakeUp() + threadKeepAlive;
+            Util.forEach(WrapThread.toArrayWrapThread(threadList), (wrapThread) -> {
+                long future = wrapThread.getLastWakeUp() + threadKeepAlive;
                 //Время последнего оживления превысило keepAlive + поток реально не работал
-                if (now > future && wth.getCountIteration().get() == 0 && c.getAndDecrement() > 0) {
-                    removeThread(wth);
+                if (now > future && wrapThread.getCountIteration().get() == 0 && c.getAndDecrement() > 0) {
+                    removeThread(wrapThread);
                 } else {
-                    wth.getCountIteration().set(0);
+                    wrapThread.getCountIteration().set(0);
                 }
                 return null;
             });

@@ -45,7 +45,9 @@ class SblServiceSupplierTest {
             Assertions.assertTrue(clone.getTpsInput() < 260, "getTpsInput Должно быть меньше 260 тпс");
             Assertions.assertTrue(clone.getTpsOutput() > 240, "getTpsOutput Должно быть более 240 тпс");
             Assertions.assertTrue(clone.getTpsOutput() < 260, "getTpsOutput Должно быть меньше 260 тпс");
-            Assertions.assertTrue(clone.getThreadCountPark() > 1 && clone.getThreadCountPark() < 5, "На парковке должно быть от 1 до 5 потоков");
+            /*
+            Не применимо, потому что под нагрузкой есть вероятность, что припаркованные потоки, снова возьмут в работу, считать такое не целесообразно
+            Assertions.assertTrue(clone.getThreadCountPark() > 1 && clone.getThreadCountPark() <  5, "На парковке должно быть от 1 до 5 потоков");*/
         });
     }
 
@@ -59,7 +61,7 @@ class SblServiceSupplierTest {
         test.setDebug(true);
         test.setTpsInputMax(maxTps);
         UtilTest.sleepSec(sleep);
-        ThreadBalancerStatistic clone = test.getStatistic();
+        ThreadBalancerStatistic clone = test.getStatisticLastClone();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null) {
             fnExpected.accept(clone);
@@ -69,11 +71,11 @@ class SblServiceSupplierTest {
 
     @Test
     void getNeedCountThread() {
-        Assertions.assertEquals(125, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 100, 150, 1), 250, true), "#1");
-        Assertions.assertEquals(63, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 100, 150, 125), 250, true), "#2");
-        Assertions.assertEquals(0, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 100, 0, 1), 250, true), "#3");
-        Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 50, 10, 1), 250, true), "#4");
-        Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(0, 50, 10, 1), 250, true), "#5");
+        Assertions.assertEquals(125, ThreadBalancerSupplier.getNeedCountThread(UtilTest.instanceSupplierTest(500, 100, 150, 1), 250, true), "#1");
+        Assertions.assertEquals(63, ThreadBalancerSupplier.getNeedCountThread(UtilTest.instanceSupplierTest(500, 100, 150, 125), 250, true), "#2");
+        Assertions.assertEquals(0, ThreadBalancerSupplier.getNeedCountThread(UtilTest.instanceSupplierTest(500, 100, 0, 1), 250, true), "#3");
+        Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(UtilTest.instanceSupplierTest(500, 50, 10, 1), 250, true), "#4");
+        Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(UtilTest.instanceSupplierTest(0, 50, 10, 1), 250, true), "#5");
     }
 
     @Test

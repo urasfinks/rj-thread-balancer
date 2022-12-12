@@ -38,7 +38,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
     @Override
     public void threadStabilizer() {
         try {
-            ThreadBalancerStatistic stat = getStatistic();
+            ThreadBalancerStatistic stat = getStatisticLastClone();
             if (stat != null) {
                 if (getThreadParkQueueSize() == 0) {//В очереди нет ждунов, значит все трудятся, накинем ещё
                     int needCountThread = formulaAddCountThread.apply(getThreadListSize());
@@ -70,7 +70,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
         //При маленькой нагрузке дёргаем всегда последний тред, что бы не было простоев
         //Далее раскрутку оставляем на откуп стабилизатору
         if (isActive()) {
-            ThreadBalancerStatistic stat = getStatCurrent();
+            ThreadBalancerStatistic stat = getStatisticMomentum();
             int diffTpsInput = getNeedCountThread(stat, getTpsInputMax().get(), debug);
             if (isThreadParkAll()) {
                 wakeUpOnceThread();

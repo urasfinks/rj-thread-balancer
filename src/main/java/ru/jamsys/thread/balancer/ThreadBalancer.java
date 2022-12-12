@@ -8,7 +8,7 @@ public interface ThreadBalancer {
 
     ThreadBalancerStatistic flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
 
-    ThreadBalancerStatistic getStatistic(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
+    ThreadBalancerStatistic getStatisticLastClone(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
 
     void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждые 2 секунды)
 

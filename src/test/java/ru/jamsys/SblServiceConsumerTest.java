@@ -116,7 +116,7 @@ class SblServiceConsumerTest {
         Util.logConsole(Thread.currentThread(), "Init task thread");
         UtilTest.sleepSec(sleep);
         Assertions.assertEquals(realInsert.get(), serviceHandleCounter.get(), "Не все задачи были обработаны");
-        ThreadBalancerStatistic clone = test.getStatistic();
+        ThreadBalancerStatistic clone = test.getStatisticLastClone();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null) {
             fnExpected.accept(clone);
@@ -126,23 +126,23 @@ class SblServiceConsumerTest {
 
     @Test
     void getNeedCountThread() {
-        Assertions.assertEquals(0, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(100,1,0, 0), true), "#1");
-        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,1,10, 0), true), "#2");
-        Assertions.assertEquals(2, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,1,20, 0), true), "#3");
-        Assertions.assertEquals(3, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,1,30, 0), true), "#4");
-        Assertions.assertEquals(0, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,2,0, 0), true), "#5");
-        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,2,5, 0), true), "#6");
-        Assertions.assertEquals(2, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,2,10, 0), true), "#7");
-        Assertions.assertEquals(6, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,2,30, 0), true), "#8");
-        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(100,2,30, 0), true), "#9");
-        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(100,3,30, 0), true), "#10");
-        Assertions.assertEquals(9, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(100,3,300, 0), true), "#11");
+        Assertions.assertEquals(0, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(100,1,0, 0), true), "#1");
+        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,1,10, 0), true), "#2");
+        Assertions.assertEquals(2, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,1,20, 0), true), "#3");
+        Assertions.assertEquals(3, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,1,30, 0), true), "#4");
+        Assertions.assertEquals(0, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,2,0, 0), true), "#5");
+        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,2,5, 0), true), "#6");
+        Assertions.assertEquals(2, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,2,10, 0), true), "#7");
+        Assertions.assertEquals(6, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,2,30, 0), true), "#8");
+        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(100,2,30, 0), true), "#9");
+        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(100,3,30, 0), true), "#10");
+        Assertions.assertEquals(9, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(100,3,300, 0), true), "#11");
 
         //Плохие сценарии
-        Assertions.assertEquals(300, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(0,1,300, 0), true), "#12");
-        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(10,0,10, 0), true), "#13");
-        Assertions.assertEquals(10, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(1,0,10, 0), true), "#13");
-        Assertions.assertEquals(10, ThreadBalancerConsumer.getNeedCountThread(ThreadBalancerStatistic.instanceConsumerTest(1,1000,10, 100), true), "#14");
+        Assertions.assertEquals(300, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(0,1,300, 0), true), "#12");
+        Assertions.assertEquals(1, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(10,0,10, 0), true), "#13");
+        Assertions.assertEquals(10, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(1,0,10, 0), true), "#13");
+        Assertions.assertEquals(10, ThreadBalancerConsumer.getNeedCountThread(UtilTest.instanceConsumerTest(1,1000,10, 100), true), "#14");
     }
 
 }
