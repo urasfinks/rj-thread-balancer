@@ -29,8 +29,7 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Sc
 
     @Override
     public void tick() {
-        //При маленькой нагрузке дёргаем всегда последний тред, что бы не было простоев
-        //Далее раскрутку оставляем на откуп стабилизатору
+        //Сколько задач в очереди, столько и будем будить потоков
         if (isActive()) {
             for (int i = 0; i < queueTask.size(); i++) {
                 wakeUpOnceThread();
@@ -43,7 +42,7 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer implements Sc
             throw new ShutdownException("Consumer shutdown");
         }
         if (isLimitTpsInputOverflow()) {
-            throw new TpsOverflowException("Max tps: " + getTpsInputMax());
+            throw new TpsOverflowException("Max tps: " + getTpsInputMax().get());
         }
         queueTask.add(message);
         incTpsInput();

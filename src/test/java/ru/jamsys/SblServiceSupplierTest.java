@@ -56,7 +56,7 @@ class SblServiceSupplierTest {
             return new MessageImpl();
         }, message -> {
         });
-        test.setDebug(false);
+        test.setDebug(true);
         test.setTpsInputMax(maxTps);
         UtilTest.sleepSec(sleep);
         ThreadBalancerStatistic clone = test.getStatistic();
@@ -74,6 +74,39 @@ class SblServiceSupplierTest {
         Assertions.assertEquals(0, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 100, 0, 1), 250, true), "#3");
         Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(500, 50, 10, 1), 250, true), "#4");
         Assertions.assertEquals(10, ThreadBalancerSupplier.getNeedCountThread(ThreadBalancerStatistic.instanceSupplierTest(0, 50, 10, 1), 250, true), "#5");
+    }
+
+    @Test
+    void testResistance(){
+        Util.logConsole(Thread.currentThread(), "Start test");
+        ThreadBalancer test = context.getBean(ThreadBalancerFactory.class).createSupplier("Test", 1, 5, 5000, 333, () -> {
+            Util.sleepMillis(500);
+            return new MessageImpl();
+        }, message -> {
+        });
+        test.setTestAutoRestoreResistanceTps(false);
+        Assertions.assertEquals(5, test.setResistance(5), "#1");
+        Assertions.assertEquals(8, test.setResistance(8), "#2");
+        Assertions.assertEquals(9, test.setResistance(9), "#3");
+        Assertions.assertEquals(9, test.setResistance(5), "#5");
+        Util.sleepMillis(2100);
+        Assertions.assertEquals(1, test.setResistance(1), "#6");
+        context.getBean(ThreadBalancerFactory.class).shutdown("Test");
+    }
+
+    @Test
+    void testResistanceRestore(){
+        Util.logConsole(Thread.currentThread(), "Start test");
+        ThreadBalancer test = context.getBean(ThreadBalancerFactory.class).createSupplier("Test", 1, 5, 5000, 333, () -> {
+            Util.sleepMillis(500);
+            return new MessageImpl();
+        }, message -> {
+        });
+        Assertions.assertEquals(4, test.setResistance(4), "#1");
+
+        Util.sleepMillis(9000);
+        Assertions.assertEquals(0, test.getResistancePercent().get(), "#2");
+        context.getBean(ThreadBalancerFactory.class).shutdown("Test");
     }
 
 }

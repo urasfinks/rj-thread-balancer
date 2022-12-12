@@ -40,8 +40,8 @@ class SblServiceConsumerTest {
 
     @Test
     void damping() { //Проверяем удаление потоков после ненадобности
-        run(1, 5, 6000L, 2, 5, 19, -1, clone ->
-                Assertions.assertEquals(1, clone.getThreadCount(), "Должен остаться только 1 поток")
+        run(1, 10, 6000L, 2, 10, 19, -1, clone ->
+                Assertions.assertEquals(5, clone.getThreadCount(), "Должен остаться только 5 потоков, так как по умолчаню 5 в парке остаются")
         );
     }
 

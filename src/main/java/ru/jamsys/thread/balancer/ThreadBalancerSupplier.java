@@ -11,6 +11,8 @@ import ru.jamsys.scheduler.SchedulerTick;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -22,19 +24,12 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
     private Supplier<Message> supplier;
     private Consumer<Message> consumer;
 
+    private ConcurrentLinkedQueue<Integer> queueResistance = new ConcurrentLinkedQueue();
+
     public void configure(String name, int threadCountMin, int threadCountMax, long threadKeepAliveMillis, long schedulerSleepMillis, Supplier<Message> supplier, Consumer<Message> consumer) {
         this.supplier = supplier;
         this.consumer = consumer;
         super.configure(name, threadCountMin, threadCountMax, threadKeepAliveMillis, schedulerSleepMillis);
-    }
-
-    @Override
-    protected void removeThread(WrapThread wth) {
-        //Кол-во неприкасаемых потоков, которые должны быть на паркинге для подстраховки (Натуральное число)
-        int threadParkMinimum = 5;
-        if (getThreadParkQueueSize() > threadParkMinimum) {
-            super.removeThread(wth);
-        }
     }
 
     @Setter
@@ -58,15 +53,25 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
         } catch (Exception e) {
             e.printStackTrace();
         }
+        if (autoRestoreResistanceTps.get() && getResistancePercent().get() > 0) {
+            getResistancePercent().decrementAndGet();
+        }
     }
 
     @Override
     public void tick() {
+        //Чистим очередь сопротивления, что бы проще было считать максимальное показание
+        //Очередь была сделана, так как несколько потоков могут паралельно закидывать информацию с просьбой уменьшить tps
+        try {
+            queueResistance.clear();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         //При маленькой нагрузке дёргаем всегда последний тред, что бы не было простоев
         //Далее раскрутку оставляем на откуп стабилизатору
         if (isActive()) {
             ThreadBalancerStatistic stat = getStatCurrent();
-            int diffTpsInput = getNeedCountThread(stat, getTpsInputMax(), debug);
+            int diffTpsInput = getNeedCountThread(stat, getTpsInputMax().get(), debug);
             if (isThreadParkAll()) {
                 wakeUpOnceThread();
             } else if (diffTpsInput > 0) {
@@ -133,4 +138,24 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer implements Sc
         return needThread;
     }
 
+    @Override
+    public int setResistance(int prc) { //Закидывается процент торможения, изначально он 0
+        /*
+         * Немного предистории:
+         * В целом всю систему надо рассчитывать как посредника, есть INPUT нагрузка и OUTPUT разгрузка
+         * Всё что мы взяли на себя - надо выполнить
+         * INPUT и OUTPUT работают в своих собственных сбалансированных пулах, может случиться, что OUTPUT начнёт умирать
+         * Поэтому OUTPUT будет трубить всем свом INPUT, что он не успевает, что бы они уменьшили свой tps
+         * Если OUTPUT моментально восстанавливаться, предусмотрено служебное восстановление (вычитание 1% за tick)
+         * */
+        AtomicInteger resistancePercent = getResistancePercent();
+
+        queueResistance.add(prc);
+        try {
+            resistancePercent.set(queueResistance.stream().reduce(Integer::max).orElse(0));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return resistancePercent.get();
+    }
 }

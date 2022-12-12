@@ -2,6 +2,7 @@ package ru.jamsys.thread.balancer;
 
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public interface ThreadBalancer {
 
@@ -19,15 +20,15 @@ public interface ThreadBalancer {
 
     void setDebug(boolean b); //Логировние в консоль отладочной информации, применялось только мной, ничего инетерсного там нет, врятли вам пригодится
 
-    @SuppressWarnings("unused")
-    void incThreadMax(); //Увеличть в рантайме кол-во потоков (Крайне не советую вам такое делать)
-
-    @SuppressWarnings("unused")
-    void decThreadMax(); //Уменьшить в рантайме кол-во потоков (Крайне не советую вам такое делать)
-
     void setTpsInputMax(int maxTps); //Установить максимальный предел вызываемых блоков iteration (Я так же вам не советую этого делать)
 
-    void setResistance(int prc); //Используется только для Supplier для поддержки сопротивления на избыточную нагрузку, для полного понимания - читать описание в реализации
+    int setResistance(int prc); //Используется только для Supplier для поддержки сопротивления на избыточную нагрузку, для полного понимания - читать описание в реализации
+
+    AtomicInteger getResistancePercent(); //Получить процент сопротивления
+
+    void setThreadParkMinimum(int threadParkMinimum);
+
+    void setTestAutoRestoreResistanceTps(boolean status); //По умолчанию восстановление tps будет работать, метод только для тестов
 
     @SuppressWarnings("all")
     public static ThreadBalancer[] toArrayThreadBalancer(List<ThreadBalancer> l) throws Exception { // Маленька защита от конкуретных итераторов с измененеием (НЕ ПАНАЦЕЯ)

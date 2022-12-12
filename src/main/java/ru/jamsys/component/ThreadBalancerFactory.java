@@ -30,16 +30,16 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listService.values());
     }
 
-    public ThreadBalancer createConsumer(String name, int countThreadMin, int countThreadMax, long keepAliveMills, long schedulerSleepMillis, Consumer<Message> consumer) {
+    public ThreadBalancer createConsumer(String name, int countThreadMin, int countThreadMax, long keepAliveMillis, long schedulerSleepMillis, Consumer<Message> consumer) {
         ThreadBalancerConsumer sblServiceConsumer = context.getBean(ThreadBalancerConsumer.class);
-        sblServiceConsumer.configure(name, countThreadMin, countThreadMax, keepAliveMills, schedulerSleepMillis, consumer);
+        sblServiceConsumer.configure(name, countThreadMin, countThreadMax, keepAliveMillis, schedulerSleepMillis, consumer);
         listService.put(name, sblServiceConsumer);
         return sblServiceConsumer;
     }
 
-    public ThreadBalancer createSupplier(String name, int countThreadMin, int countThreadMax, long keepAlive, long schedulerSleepMillis, Supplier<Message> supplier, Consumer<Message> consumer) {
+    public ThreadBalancer createSupplier(String name, int countThreadMin, int countThreadMax, long keepAliveMillis, long schedulerSleepMillis, Supplier<Message> supplier, Consumer<Message> consumer) {
         ThreadBalancerSupplier sblServiceSupplier = context.getBean(ThreadBalancerSupplier.class);
-        sblServiceSupplier.configure(name, countThreadMin, countThreadMax, keepAlive, schedulerSleepMillis, supplier, consumer);
+        sblServiceSupplier.configure(name, countThreadMin, countThreadMax, keepAliveMillis, schedulerSleepMillis, supplier, consumer);
         listService.put(name, sblServiceSupplier);
         return sblServiceSupplier;
     }

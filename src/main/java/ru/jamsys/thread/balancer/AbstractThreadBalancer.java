@@ -29,7 +29,11 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     private long threadKeepAlive;
 
     @Getter
-    private volatile int tpsInputMax = -1; //-1 infinity
+    private AtomicInteger tpsInputMax = new AtomicInteger(1);
+
+    @Setter
+    @Getter
+    private AtomicInteger resistancePercent = new AtomicInteger(0);
 
     private final AtomicInteger threadNameCounter = new AtomicInteger(0);
 
@@ -57,6 +61,9 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
         return statLast.clone();
     }
 
+    @Setter
+    private int threadParkMinimum = 5;
+
     protected ThreadBalancerStatistic getStatCurrent() {
         ThreadBalancerStatistic curStat = new ThreadBalancerStatistic();
         curStat.setServiceName(getName());
@@ -71,18 +78,8 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     protected boolean debug = false;
 
     @Override
-    public void incThreadMax() {
-        threadCountMax.incrementAndGet();
-    }
-
-    @Override
-    public void decThreadMax() {
-        threadCountMax.decrementAndGet();
-    }
-
-    @Override
     public void setTpsInputMax(int max) {
-        tpsInputMax = max;
+        tpsInputMax.set(max);
     }
 
     @Override
@@ -99,8 +96,16 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     }
 
     @Override
-    public void setResistance(int prc) {
+    public int setResistance(int prc) { //Отночиться только к Supplier
         //Для того, что бы не надо было реализовывать в Consumer
+        return 0;
+    }
+
+    protected AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Отночиться только к Supplier
+
+    @Override
+    public void setTestAutoRestoreResistanceTps(boolean status) { //Отночиться только к Supplier
+        autoRestoreResistanceTps.set(status);
     }
 
     @Override
@@ -183,7 +188,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
     }
 
     protected boolean isLimitTpsInputOverflow() {
-        return tpsInputMax > 0 && tpsInput.get() >= tpsInputMax;
+        return tpsInputMax.get() > 0 && tpsInput.get() >= tpsInputMax.get();
     }
 
     protected void incTpsInput() {
@@ -258,9 +263,10 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer {
         }
     }
 
-    protected void removeThread(WrapThread wth) {
-        if (threadList.size() > threadCountMin) {
-            forceRemoveThread(wth);
+    protected void removeThread(WrapThread wrapThread) {
+        //Кол-во неприкасаемых потоков, которые должны быть на паркинге для подстраховки (Натуральное число)
+        if (getThreadParkQueueSize() > threadParkMinimum && threadList.size() > threadCountMin) {
+            forceRemoveThread(wrapThread);
         }
     }
 
