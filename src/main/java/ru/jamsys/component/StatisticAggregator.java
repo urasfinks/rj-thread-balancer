@@ -2,6 +2,7 @@ package ru.jamsys.component;
 
 import org.springframework.stereotype.Component;
 import ru.jamsys.StatisticData;
+import ru.jamsys.Util;
 import ru.jamsys.scheduler.AbstractThreadBalancerScheduler;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerStatistic;
@@ -98,6 +99,14 @@ public class StatisticAggregator extends AbstractThreadBalancerScheduler {
                 e.printStackTrace();
             }*/
         };
+    }
+
+    @Override
+    public <T> Consumer<T> getConsumer() {
+        if (debug) {
+            Util.logConsole(Thread.currentThread(), "flushStatistic");
+        }
+        return super.getConsumer();
     }
 
     @PreDestroy

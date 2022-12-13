@@ -14,7 +14,6 @@ public class ThreadBalancerStatistic implements Cloneable {
     String serviceName;
 
     int threadCount;
-    int queueSize;
     int tpsInput;
     int tpsOutput;
     int tpsIdle;

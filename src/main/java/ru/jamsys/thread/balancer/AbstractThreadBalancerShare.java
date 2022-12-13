@@ -45,15 +45,11 @@ public abstract class AbstractThreadBalancerShare implements ThreadBalancer {
     private final AtomicInteger tpsInput = new AtomicInteger(0);
     private final AtomicInteger tpsOutput = new AtomicInteger(0);
 
-    private final ThreadBalancerStatistic statLast = new ThreadBalancerStatistic();
+    private volatile ThreadBalancerStatistic statLast = new ThreadBalancerStatistic();
 
     private final ConcurrentLinkedDeque<Long> timeTransactionQueue = new ConcurrentLinkedDeque<>();
 
     private TickScheduler scheduler;
-
-    public ThreadBalancerStatistic getStatisticLast() {
-        return statLast;
-    }
 
     @Override
     @Nullable
@@ -159,16 +155,8 @@ public abstract class AbstractThreadBalancerShare implements ThreadBalancer {
         return stat.getThreadCount() > threadCountMin;
     }
 
-    protected boolean isThreadAdd() {
-        return threadList.size() < threadCountMax.get();
-    }
-
     protected boolean isThreadParkAll() {
         return threadParkQueue.size() > 0 && threadParkQueue.size() == threadList.size();
-    }
-
-    protected int getThreadListSize() {
-        return threadList.size();
     }
 
     protected int getThreadParkQueueSize() {
@@ -230,18 +218,24 @@ public abstract class AbstractThreadBalancerShare implements ThreadBalancer {
         }
     }
 
-    protected void overclocking(int count) {
+    protected int overclocking(int count) {
         if (!isActive() || threadList.size() >= threadCountMax.get()) {
-            return;
+            return 0;
         }
+        int countRealAdd = 0;
         if (count > 0) {
             for (int i = 0; i < count; i++) {
-                addThread();
+                if (addThread()) {
+                    countRealAdd++;
+                } else {
+                    break;
+                }
             }
         }
+        return countRealAdd;
     }
 
-    protected void addThread() {
+    protected boolean addThread() {
         if (isActive() && threadList.size() < threadCountMax.get()) {
             final ThreadBalancer self = this;
             final WrapThread wrapThread = new WrapThread();
@@ -267,7 +261,9 @@ public abstract class AbstractThreadBalancerShare implements ThreadBalancer {
             wrapThread.getThread().setName(getName() + "-" + threadNameCounter.getAndIncrement());
             wrapThread.getThread().start();
             threadList.add(wrapThread);
+            return true;
         }
+        return false;
     }
 
     protected void removeThread(WrapThread wrapThread) {

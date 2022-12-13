@@ -14,22 +14,11 @@ public class UtilTest {
         }
     }
 
-    public static ThreadBalancerStatistic instanceConsumerTest(int tpsOutput, int threadCount, int queueSize, int tpsInput) {
+    /*public static ThreadBalancerStatistic getThreadBalancerStatisticFromString(String log){
         ThreadBalancerStatistic t = new ThreadBalancerStatistic();
-        t.setTpsOutput(tpsOutput);
-        t.setThreadCount(threadCount);
-        t.setQueueSize(queueSize);
-        t.setTpsInput(tpsInput);
+        //needThread: 1 => getNeedCountThread: needTransaction: 10; threadTps: null; ThreadBalancerStatistic(serviceName=Test, threadCount=1, queueSize=0, tpsInput=12, tpsOutput=0, tpsIdle=2, threadCountPark=1, sumTimeTpsMax=0, sumTimeTpsMin=0, sumTimeTpsAvg=0.0)
+        log.split("ThreadBalancerStatistic(")
         return t;
-    }
-
-    public static ThreadBalancerStatistic instanceSupplierTest(int sumTimeTpsAvg, int threadCount, int threadCountPark, int tpsInput) {
-        ThreadBalancerStatistic t = new ThreadBalancerStatistic();
-        t.setSumTimeTpsAvg(sumTimeTpsAvg);
-        t.setThreadCount(threadCount);
-        t.setThreadCountPark(threadCountPark);
-        t.setTpsInput(tpsInput);
-        return t;
-    }
+    }*/
 
 }

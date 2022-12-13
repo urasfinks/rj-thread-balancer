@@ -31,7 +31,7 @@ public abstract class AbstractThreadBalancer extends AbstractThreadBalancerShare
         if (isActive()) {
             ThreadBalancerStatistic stat = getStatisticMomentum();
             //int needTransaction = input ? (getTpsInputMax().get() - stat.getTpsInput()) : (queueTask.size());
-            int needThreadCount = Math.min(getNeedCountThreadRelease(stat), stat.getThreadCountPark());
+            int needThreadCount = Math.min(getNeedCountThreadRelease(stat, false), stat.getThreadCountPark());
             if (needThreadCount > 0) {
                 for (int i = 0; i < needThreadCount; i++) {
                     wakeUpOnceThread();
@@ -47,15 +47,16 @@ public abstract class AbstractThreadBalancer extends AbstractThreadBalancerShare
 
     @Override
     public void threadStabilizer() {
+        Util.logConsole(Thread.currentThread(), "threadStabilizer()");
         try {
-            ThreadBalancerStatistic stat = getStatisticLastClone();
+            ThreadBalancerStatistic stat = getStatisticMomentum();
             if (stat != null) {
                 if (getThreadParkQueueSize() == 0) {//В очереди нет ждунов, значит все трудятся, накинем ещё
-                    int needCountThread = formulaAddCountThread.apply(getNeedCountThreadRelease(stat));
+                    int needCountThread = formulaAddCountThread.apply(getNeedCountThreadRelease(stat, true));
+                    int addThreadCount = overclocking(needCountThread);
                     if (debug) {
-                        Util.logConsole(Thread.currentThread(), "AddThread: " + needCountThread);
+                        Util.logConsole(Thread.currentThread(), "AddThread: " + addThreadCount);
                     }
-                    overclocking(needCountThread);
                 } else if (isThreadRemove(stat)) { //Кол-во потоков больше минимума
                     checkKeepAliveAndRemoveThread();
                 }
@@ -90,9 +91,11 @@ public abstract class AbstractThreadBalancer extends AbstractThreadBalancerShare
         }
     }
 
-    public static int getNeedCountThread(@NonNull ThreadBalancerStatistic stat, int needTransaction, boolean debug) {
-        //int needTransaction = tpsInputMax - stat.getTpsInput();
-        int needThread = 0;
+    public static int getNeedCountThreadByTransaction(@NonNull ThreadBalancerStatistic stat, int needTransaction, boolean debug, boolean create) {
+        if (needTransaction <= 0) {
+            return 0;
+        }
+        int needThread = create ? needTransaction : stat.getThreadCountPark();
         BigDecimal threadTps = null;
         if (needTransaction > 0) {
             // Может возникнуть такая ситуация, когда за 1 секунду не будет собрана статистика
@@ -101,12 +104,7 @@ public abstract class AbstractThreadBalancer extends AbstractThreadBalancerShare
                     threadTps = new BigDecimal(1000)
                             .divide(BigDecimal.valueOf(stat.getSumTimeTpsAvg()), 2, RoundingMode.HALF_UP);
 
-                    if (threadTps.doubleValue() == 0.0) {
-                        //Может случится такое, что потоки встанут на длительную работу или это просто начало
-                        //И средняя по транзакция будет равна 0
-                        //Пока думаю, освежу всех в отстойние)
-                        needThread = stat.getThreadCountPark();
-                    } else {
+                    if (threadTps.doubleValue() > 0.0) {
                         needThread = new BigDecimal(needTransaction)
                                 .divide(threadTps, 2, RoundingMode.HALF_UP)
                                 .setScale(0, RoundingMode.CEILING)
@@ -115,16 +113,20 @@ public abstract class AbstractThreadBalancer extends AbstractThreadBalancerShare
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else {
-                // getSumTimeTpsAvg = 0 => / zero, если нет статистики значит, все потоки встали на одну транзакцию
-                // Но могут быть запаркованные с предыдущей операции
-                needThread = stat.getThreadCountPark();
             }
         }
         if (debug) {
-            Util.logConsole(Thread.currentThread(), "getNeedCountThread: needTransaction: " + needTransaction + "; threadTps: " + threadTps + "; needThread: " + needThread + "; " + stat);
+            Util.logConsole(Thread.currentThread(), (create ? "CREATE" : "TICK") + ": " + needThread + " => needTransaction: " + needTransaction + "; threadTps: " + threadTps + "; Statistic: " + Util.jsonObjectToString(stat));
         }
-        return needThread;
+        if (create) {
+            if (stat.getThreadCountPark() >= needThread) { //Если припаркованных больше, чем требуется, просто вернём 0
+                return 0;
+            } else { //Если необходимо больше, чем припаркованных, вернём разницу, которая необходима
+                return needThread - stat.getThreadCountPark();
+            }
+        } else {
+            return needThread;
+        }
     }
 
 }

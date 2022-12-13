@@ -33,6 +33,6 @@ public interface ThreadBalancer {
         return l.toArray(new ThreadBalancer[0]);
     }
 
-    int getNeedCountThreadRelease(ThreadBalancerStatistic stat); //Реализация по необходимости потоков
+    int getNeedCountThreadRelease(ThreadBalancerStatistic stat, boolean create); //Реализация по необходимости потоков
 
 }
