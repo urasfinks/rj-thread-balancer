@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 class ThreadBalancerConsumerTest {
+
     static ConfigurableApplicationContext context;
 
     @BeforeAll
@@ -33,7 +34,7 @@ class ThreadBalancerConsumerTest {
 
     @Test
     void overclocking() { //Проверяем разгон потоков под рост задач
-        run(1, 5, 60000L, 2, 10, 5, 500, clone ->
+        run(1, 5, 60000L, 1, 10, 5, 500, clone ->
                 Assertions.assertEquals(5, clone.getThreadCount(), "Кол-во потоков должно быть 5")
         );
     }
@@ -59,7 +60,7 @@ class ThreadBalancerConsumerTest {
         );
     }
 
-    void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int sleep, int tpsInputMax, Consumer<ThreadBalancerStatistic> fnExpected) {
+    void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int sleep, int tpsInputMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);
 
@@ -106,6 +107,7 @@ class ThreadBalancerConsumerTest {
                     TimeUnit.MILLISECONDS.sleep(5000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    break;
                 }
             }
         });
@@ -113,11 +115,12 @@ class ThreadBalancerConsumerTest {
         Util.logConsole(Thread.currentThread(), "Init task thread");
         UtilTest.sleepSec(sleep);
         Assertions.assertEquals(realInsert.get(), serviceHandleCounter.get(), "Не все задачи были обработаны");
-        ThreadBalancerStatistic clone = test.getStatisticLastClone();
+        ThreadBalancerStatisticData clone = test.getStatisticLastClone();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null && fnExpected != null) {
             fnExpected.accept(clone);
         }
+        t1.interrupt();
         context.getBean(ThreadBalancerFactory.class).shutdown("Test");
     }
 
@@ -138,8 +141,8 @@ class ThreadBalancerConsumerTest {
     }
 
     int ret(int needTransaction, String x, boolean create) {
-        WrapJsonToObject<ThreadBalancerStatistic> wrap = Util.jsonToObject(x, ThreadBalancerStatistic.class);
-        ThreadBalancerStatistic stat = wrap.getObject();
+        WrapJsonToObject<ThreadBalancerStatisticData> wrap = Util.jsonToObject(x, ThreadBalancerStatisticData.class);
+        ThreadBalancerStatisticData stat = wrap.getObject();
         return AbstractThreadBalancer.getNeedCountThreadByTransaction(stat, needTransaction, true, create);
     }
 }

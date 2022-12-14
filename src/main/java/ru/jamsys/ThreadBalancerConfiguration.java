@@ -8,7 +8,7 @@ import ru.jamsys.component.ThreadBalancerFactory;
 public class ThreadBalancerConfiguration {
 
     @Bean
-    public ThreadBalancerFactory getCmpThreadBalancerFactory() {
+    public ThreadBalancerFactory getThreadBalancerFactory() {
         return new ThreadBalancerFactory();
     }
 

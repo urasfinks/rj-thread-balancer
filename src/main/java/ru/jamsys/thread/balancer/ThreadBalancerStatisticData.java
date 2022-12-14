@@ -8,10 +8,10 @@ import java.util.LongSummaryStatistics;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Data
-public class ThreadBalancerStatistic implements Cloneable {
+public class ThreadBalancerStatisticData implements Cloneable {
 
     @JsonIgnore
-    String serviceName;
+    String threadBalancerName;
 
     int threadCount;
     int tpsInput;
@@ -31,9 +31,9 @@ public class ThreadBalancerStatistic implements Cloneable {
     }
 
     @Nullable
-    public ThreadBalancerStatistic clone() {
+    public ThreadBalancerStatisticData clone() {
         try {
-            return (ThreadBalancerStatistic) super.clone();
+            return (ThreadBalancerStatisticData) super.clone();
         } catch (Exception e) {
             e.printStackTrace();
         }

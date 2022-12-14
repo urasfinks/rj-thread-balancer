@@ -7,8 +7,8 @@ import org.springframework.lang.Nullable;
 import ru.jamsys.Util;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageHandle;
+import ru.jamsys.scheduler.SchedulerTickImpl;
 import ru.jamsys.scheduler.SchedulerTick;
-import ru.jamsys.scheduler.TickScheduler;
 import ru.jamsys.thread.balancer.exception.ShutdownException;
 
 import java.math.BigDecimal;
@@ -67,20 +67,20 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     private final AtomicInteger tpsInput = new AtomicInteger(0);
     private final AtomicInteger tpsOutput = new AtomicInteger(0);
 
-    private volatile ThreadBalancerStatistic statLast = new ThreadBalancerStatistic();
+    private volatile ThreadBalancerStatisticData statLast = new ThreadBalancerStatisticData();
 
     private final ConcurrentLinkedDeque<Long> timeTransactionQueue = new ConcurrentLinkedDeque<>();
 
-    private TickScheduler scheduler;
+    private SchedulerTickImpl scheduler;
 
     @Override
     @Nullable
-    public ThreadBalancerStatistic getStatisticLastClone() {
+    public ThreadBalancerStatisticData getStatisticLastClone() {
         return statLast.clone();
     }
 
     @Override
-    public void iteration(WrapThread wrapThread, ThreadBalancer service) {
+    public void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer) {
         if (supplier != null) {
             while (isActive() && wrapThread.getIsRun().get() && !isLimitTpsInputOverflow()) {
                 long startTime = System.currentTimeMillis();
@@ -104,7 +104,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     public void threadStabilizer() {
         Util.logConsole(Thread.currentThread(), "threadStabilizer()");
         try {
-            ThreadBalancerStatistic stat = getStatisticMomentum();
+            ThreadBalancerStatisticData stat = getStatisticMomentum();
             if (stat != null) {
                 if (getThreadParkQueueSize() == 0) {//В очереди нет ждунов, значит все трудятся, накинем ещё
                     int needCountThread = formulaAddCountThread.apply(getNeedCountThreadRelease(stat, true));
@@ -127,7 +127,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     @Override
     public void tick() { //Сколько надо пробудить потоков
         if (isActive()) {
-            ThreadBalancerStatistic stat = getStatisticMomentum();
+            ThreadBalancerStatisticData stat = getStatisticMomentum();
             int needThreadCount = Math.min(getNeedCountThreadRelease(stat, false), stat.getThreadCountPark());
             if (needThreadCount > 0) {
                 for (int i = 0; i < needThreadCount; i++) {
@@ -140,9 +140,9 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     }
 
     @Nullable
-    public ThreadBalancerStatistic getStatisticMomentum() {
-        ThreadBalancerStatistic curStat = new ThreadBalancerStatistic();
-        curStat.setServiceName(getName());
+    public ThreadBalancerStatisticData getStatisticMomentum() {
+        ThreadBalancerStatisticData curStat = new ThreadBalancerStatisticData();
+        curStat.setThreadBalancerName(getName());
         curStat.setTpsIdle(tpsIdle.get());
         curStat.setTpsInput(tpsInput.get());
         curStat.setTpsOutput(tpsOutput.get());
@@ -159,8 +159,8 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     }
 
     @Override
-    public ThreadBalancerStatistic flushStatistic() {
-        statLast.setServiceName(getName());
+    public ThreadBalancerStatisticData flushStatistic() {
+        statLast.setThreadBalancerName(getName());
         statLast.setTpsIdle(tpsIdle.getAndSet(0));
         statLast.setTpsInput(tpsInput.getAndSet(0));
         statLast.setTpsOutput(tpsOutput.getAndSet(0));
@@ -230,7 +230,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         }
     }
 
-    protected boolean isThreadRemove(@NonNull ThreadBalancerStatistic stat) {
+    protected boolean isThreadRemove(@NonNull ThreadBalancerStatisticData stat) {
         return stat.getThreadCount() > threadCountMin;
     }
 
@@ -250,7 +250,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
             this.threadCountMax = new AtomicInteger(threadCountMax);
             this.threadKeepAlive = threadKeepAliveMillis;
 
-            scheduler = new TickScheduler(name + "-Scheduler", schedulerSleepMillis);
+            scheduler = new SchedulerTickImpl(name + "-Scheduler", schedulerSleepMillis);
             scheduler.run(this);
             overclocking(threadCountMin);
         }
@@ -391,7 +391,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         }
     }
 
-    public static int getNeedCountThreadByTransaction(@NonNull ThreadBalancerStatistic stat, int needTransaction, boolean debug, boolean create) {
+    public static int getNeedCountThreadByTransaction(@NonNull ThreadBalancerStatisticData stat, int needTransaction, boolean debug, boolean create) {
         if (needTransaction <= 0) {
             return 0;
         }

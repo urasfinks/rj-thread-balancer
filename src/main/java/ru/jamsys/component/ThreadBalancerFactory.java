@@ -20,21 +20,21 @@ public class ThreadBalancerFactory {
         this.context = context;
     }
 
-    Map<String, ThreadBalancer> listService = new ConcurrentHashMap<>();
+    Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();
 
-    public List<ThreadBalancer> getListService() {
-        return new ArrayList<>(listService.values());
+    public List<ThreadBalancer> getListThreadBalancer() {
+        return new ArrayList<>(listThreadBalancer.values());
     }
 
     public ThreadBalancerConsumer createConsumer(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, long schedulerSleepMillis) {
         ThreadBalancerConsumer bean = context.getBean(ThreadBalancerConsumer.class);
         bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
-        listService.put(name, bean);
+        listThreadBalancer.put(name, bean);
         return bean;
     }
 
     public void shutdown(String name) {
-        ThreadBalancer cs = listService.get(name);
+        ThreadBalancer cs = listThreadBalancer.get(name);
         while (true) {
             try {// Так как shutdown публичный метод, его может вызвать кто-то другой, поэтому будем ждать пока сервис остановится
                 cs.shutdown();
@@ -48,7 +48,7 @@ public class ThreadBalancerFactory {
                 e.printStackTrace();
             }
         }
-        listService.remove(name);
+        listThreadBalancer.remove(name);
     }
 
 }

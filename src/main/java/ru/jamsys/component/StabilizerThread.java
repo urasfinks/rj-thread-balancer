@@ -12,9 +12,10 @@ public class StabilizerThread extends AbstractThreadBalancerScheduler {
 
     final private ThreadBalancerFactory threadBalancerFactory;
 
-    public StabilizerThread(ThreadBalancerFactory cmpService) {
-        super("ServiceStabilizer", 1000);
-        this.threadBalancerFactory = cmpService;
+    public StabilizerThread(ThreadBalancerFactory threadBalancerFactory) {
+        super("StabilizerThread", 1000);
+        this.threadBalancerFactory = threadBalancerFactory;
+        run();
     }
 
     @Override

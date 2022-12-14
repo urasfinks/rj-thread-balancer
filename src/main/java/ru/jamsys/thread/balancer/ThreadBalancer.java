@@ -6,15 +6,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public interface ThreadBalancer {
 
-    ThreadBalancerStatistic flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
+    ThreadBalancerStatisticData flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
 
-    ThreadBalancerStatistic getStatisticLastClone(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
+    ThreadBalancerStatisticData getStatisticLastClone(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
 
     void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждую секунду)
 
     String getName(); //Имя пула балансировки
 
-    void iteration(WrapThread wrapThread, ThreadBalancer service); //Вызывается созданными потоками, для непосредственного вызова ваших функциональных блоков. Для вас это бесполезный метод
+    void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer); //Вызывается созданными потоками, для непосредственного вызова ваших функциональных блоков. Для вас это бесполезный метод
 
     void shutdown(); // Потушить сервис, вызывается на завершении программы, надеюсь вам никогда не прийдётся его использовать, однако будте вкурсе - он потоко безопасный, вы можете получить исключения
 
@@ -33,6 +33,6 @@ public interface ThreadBalancer {
         return l.toArray(new ThreadBalancer[0]);
     }
 
-    int getNeedCountThreadRelease(ThreadBalancerStatistic stat, boolean create); //Реализация по необходимости потоков
+    int getNeedCountThreadRelease(ThreadBalancerStatisticData stat, boolean create); //Реализация по необходимости потоков
 
 }

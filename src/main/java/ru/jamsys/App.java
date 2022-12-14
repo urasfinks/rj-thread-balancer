@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import ru.jamsys.component.StabilizerThread;
-import ru.jamsys.component.StatisticAggregator;
+import ru.jamsys.component.StatisticThreadBalancer;
 
 @SpringBootApplication
 public class App {
@@ -17,12 +17,11 @@ public class App {
     }
 
     public static void initContext(ConfigurableApplicationContext context, boolean debug) {
-        StabilizerThread cmpStabilizerThread = context.getBean(StabilizerThread.class);
-        cmpStabilizerThread.setDebug(debug);
-        cmpStabilizerThread.run();
+        StabilizerThread stabilizerThread = context.getBean(StabilizerThread.class);
+        stabilizerThread.setDebug(debug);
 
-        StatisticAggregator statisticAggregator = context.getBean(StatisticAggregator.class);
-        statisticAggregator.setDebug(debug);
-        statisticAggregator.run();
+        StatisticThreadBalancer statisticThreadBalancer = context.getBean(StatisticThreadBalancer.class);
+        statisticThreadBalancer.setDebug(debug);
     }
+
 }

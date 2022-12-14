@@ -25,7 +25,7 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer {
     }
 
     @Override
-    public int getNeedCountThreadRelease(ThreadBalancerStatistic stat, boolean create) {
+    public int getNeedCountThreadRelease(ThreadBalancerStatisticData stat, boolean create) {
         return getNeedCountThreadByTransaction(stat, queueTask.size(), debug, create);
     }
 
