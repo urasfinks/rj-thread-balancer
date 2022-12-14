@@ -35,10 +35,13 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     protected Function<Integer, Integer> formulaAddCountThread = (need) -> need;
 
     @Setter
-    protected Supplier<Message> supplier = null;
+    @NonNull
+    protected Supplier<Message> supplier = () -> null;
 
     @Setter
-    protected Consumer<Message> consumer = null;
+    @NonNull
+    protected Consumer<Message> consumer = (msg) -> {
+    };
 
     @Getter
     protected String name;
@@ -80,15 +83,14 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     public void iteration(WrapThread wrapThread, ThreadBalancer service) {
         if (supplier != null) {
             while (isActive() && wrapThread.getIsRun().get() && !isLimitTpsInputOverflow()) {
-                incTpsInput();
                 long startTime = System.currentTimeMillis();
                 Message message = supplier.get();
                 if (message != null) {
-                    incTpsOutput(System.currentTimeMillis() - startTime);
+                    tpsInput.incrementAndGet();
                     message.onHandle(MessageHandle.CREATE, this);
-                    if (consumer != null) {
-                        consumer.accept(message);
-                    }
+                    consumer.accept(message);
+                    timeTransactionQueue.add(System.currentTimeMillis() - startTime);
+                    tpsOutput.incrementAndGet();
                 } else {
                     break;
                 }
@@ -255,18 +257,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     }
 
     protected boolean isLimitTpsInputOverflow() {
-        return tpsInputMax.get() > 0 && tpsInput.get() >= tpsInputMax.get();
-    }
-
-    protected void incTpsInput() {
-        tpsInput.incrementAndGet();
-    }
-
-    protected void incTpsOutput(long time) {
-        if (time > 0) {
-            timeTransactionQueue.add(time);
-        }
-        tpsOutput.incrementAndGet();
+        return tpsInput.get() >= tpsInputMax.get();
     }
 
     protected boolean isActive() {

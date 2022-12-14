@@ -59,11 +59,6 @@ class ThreadBalancerConsumerTest {
         );
     }
 
-    @Test
-    void tpsInputMax() { //Проверяем, что в очередь не падает больше 5 сообщений в секунду
-        run(1, 1, 16000L, 2, 20, 15, 5, null);
-    }
-
     void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int sleep, int tpsInputMax, Consumer<ThreadBalancerStatistic> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);

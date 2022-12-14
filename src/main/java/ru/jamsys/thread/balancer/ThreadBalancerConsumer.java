@@ -8,14 +8,12 @@ import ru.jamsys.thread.balancer.exception.ShutdownException;
 import ru.jamsys.thread.balancer.exception.TpsOverflowException;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @Scope("prototype")
 public class ThreadBalancerConsumer extends AbstractThreadBalancer {
 
     private final ConcurrentLinkedDeque<Message> queueTask = new ConcurrentLinkedDeque<>();
-    AtomicInteger consumerInputTps = new AtomicInteger(0);
 
     @Override
     public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis, long schedulerSleepMillis) {
@@ -35,10 +33,6 @@ public class ThreadBalancerConsumer extends AbstractThreadBalancer {
         if (!isActive()) {
             throw new ShutdownException("Consumer shutdown");
         }
-        if (consumerInputTps.get() > getTpsInputMax().get()) {
-            throw new TpsOverflowException("Max tps: " + getTpsInputMax().get());
-        }
-        consumerInputTps.incrementAndGet();
         queueTask.add(message);
         message.onHandle(MessageHandle.PUT, this);
     }
