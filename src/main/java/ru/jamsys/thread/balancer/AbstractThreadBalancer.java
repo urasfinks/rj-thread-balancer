@@ -83,6 +83,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     public void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer) {
         if (supplier != null) {
             while (isActive() && wrapThread.getIsRun().get() && !isLimitTpsInputOverflow()) {
+                wrapThread.incCountIteration();
                 long startTime = System.currentTimeMillis();
                 Message message = supplier.get();
                 if (message != null) {

@@ -41,7 +41,7 @@ public class StatisticThreadBalancer extends AbstractThreadBalancerScheduler {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected Consumer<Object> getResultHandler() {
+    protected Consumer<Object> getResultHandlerList() {
         return result -> {
             Map<String, ThreadBalancerStatisticData> map = new HashMap<>();
             for (ThreadBalancerStatisticData item : (List<ThreadBalancerStatisticData>) result) {

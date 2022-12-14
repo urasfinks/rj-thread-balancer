@@ -36,8 +36,4 @@ public class StabilizerThread extends AbstractThreadBalancerScheduler {
         super.shutdown();
     }
 
-    @Override
-    public void tick() {
-
-    }
 }

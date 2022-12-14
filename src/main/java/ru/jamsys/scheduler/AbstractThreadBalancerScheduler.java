@@ -22,7 +22,7 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
                 ThreadBalancerFactory threadBalancerFactory = getThreadBalancerFactory();
                 if (threadBalancerFactory != null) {
                     List<Object> objects = Util.forEach(ThreadBalancer.toArrayThreadBalancer(threadBalancerFactory.getListThreadBalancer()), getHandler());
-                    Consumer<Object> handler = getResultHandler();
+                    Consumer<Object> handler = getResultHandlerList();
                     if (handler != null) {
                         handler.accept(objects);
                     }
@@ -49,7 +49,7 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
     }
 
     @Nullable
-    protected Consumer<Object> getResultHandler() {
+    protected Consumer<Object> getResultHandlerList() {
         return null;
     }
 
