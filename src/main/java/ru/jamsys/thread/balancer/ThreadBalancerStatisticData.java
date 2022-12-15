@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import org.springframework.lang.Nullable;
 
-import java.util.LongSummaryStatistics;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Data
@@ -27,7 +27,7 @@ public class ThreadBalancerStatisticData implements Cloneable {
         LongSummaryStatistics avgTimeTps = queue.stream().mapToLong(Long::longValue).summaryStatistics();
         sumTimeTpsMax = avgTimeTps.getMax();
         sumTimeTpsMin = avgTimeTps.getMin();
-        sumTimeTpsAvg = avgTimeTps.getMin();
+        sumTimeTpsAvg = avgTimeTps.getAverage();
     }
 
     @Nullable

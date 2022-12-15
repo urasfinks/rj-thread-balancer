@@ -8,7 +8,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import ru.jamsys.App;
 import ru.jamsys.Util;
 import ru.jamsys.UtilTest;
-import ru.jamsys.WrapJsonToObject;
 import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageImpl;
@@ -60,13 +59,12 @@ class ThreadBalancerConsumerTest {
         );
     }
 
-    void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int sleep, int tpsInputMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int timeTestSec, int tpsInputMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);
 
         ThreadBalancerConsumer test = context.getBean(ThreadBalancerFactory.class).createConsumer("Test", countThreadMin, countThreadMax, tpsInputMax, keepAlive, 333);
         test.setConsumer((msg) -> {
-            //Util.logConsole(Thread.currentThread(), "Halomka");
             try {
                 Thread.sleep(1000);
             } catch (Exception e) {
@@ -77,7 +75,6 @@ class ThreadBalancerConsumerTest {
         });
 
         test.setDebug(true);
-        test.setTpsInputMax(tpsInputMax);
         Util.logConsole(Thread.currentThread(), "Init Bean");
 
         final AtomicInteger realInsert = new AtomicInteger(0);
@@ -113,9 +110,9 @@ class ThreadBalancerConsumerTest {
         });
         t1.start();
         Util.logConsole(Thread.currentThread(), "Init task thread");
-        UtilTest.sleepSec(sleep);
+        UtilTest.sleepSec(timeTestSec);
         Assertions.assertEquals(realInsert.get(), serviceHandleCounter.get(), "Не все задачи были обработаны");
-        ThreadBalancerStatisticData clone = test.getStatisticLastClone();
+        ThreadBalancerStatisticData clone = test.getStatisticAggregate();
         Util.logConsole(Thread.currentThread(), "LAST STAT: " + clone);
         if (clone != null && fnExpected != null) {
             fnExpected.accept(clone);
@@ -124,25 +121,4 @@ class ThreadBalancerConsumerTest {
         context.getBean(ThreadBalancerFactory.class).shutdown("Test");
     }
 
-    @Test
-    void testGetNeedCountThreadTick() { //Tick - это потребность пробудить потоки, а не создать
-        Assertions.assertEquals(0, ret(5, "{\"threadCount\":10,\"tpsInput\":9,\"tpsOutput\":9,\"tpsIdle\":9,\"threadCountPark\":0,\"sumTimeTpsMax\":0,\"sumTimeTpsMin\":0,\"sumTimeTpsAvg\":9.223372036854776E18}", false), "#1");
-        Assertions.assertEquals(0, ret(5, "{\"threadCount\":1,\"tpsInput\":0,\"tpsOutput\":0,\"tpsIdle\":0,\"threadCountPark\":0,\"sumTimeTpsMax\":0,\"sumTimeTpsMin\":0,\"sumTimeTpsAvg\":9.223372036854776E18}", false), "#1");
-        //Assertions.assertEquals(9, ret(9, "", true), "#1");
-    }
-
-    @Test
-    void testGetNeedCountThreadCreate() {
-        Assertions.assertEquals(9, ret(9, "{\"threadCount\":1,\"tpsInput\":12,\"tpsOutput\":1,\"tpsIdle\":2,\"threadCountPark\":0,\"sumTimeTpsMax\":0,\"sumTimeTpsMin\":0,\"sumTimeTpsAvg\":0.0}", true), "#1");
-        Assertions.assertEquals(0, ret(7, "{\"threadCount\":8,\"tpsInput\":3,\"tpsOutput\":0,\"tpsIdle\":3,\"threadCountPark\":8,\"sumTimeTpsMax\":-9223372036854775808,\"sumTimeTpsMin\":9223372036854775807,\"sumTimeTpsAvg\":9.223372036854776E18}", true), "#2");
-        Assertions.assertEquals(0, ret(8, "{\"threadCount\":8,\"tpsInput\":3,\"tpsOutput\":0,\"tpsIdle\":3,\"threadCountPark\":8,\"sumTimeTpsMax\":-9223372036854775808,\"sumTimeTpsMin\":9223372036854775807,\"sumTimeTpsAvg\":9.223372036854776E18}", true), "#2");
-        Assertions.assertEquals(1, ret(9, "{\"threadCount\":8,\"tpsInput\":3,\"tpsOutput\":0,\"tpsIdle\":3,\"threadCountPark\":8,\"sumTimeTpsMax\":-9223372036854775808,\"sumTimeTpsMin\":9223372036854775807,\"sumTimeTpsAvg\":9.223372036854776E18}", true), "#2");
-        Assertions.assertEquals(2, ret(10, "{\"threadCount\":8,\"tpsInput\":3,\"tpsOutput\":0,\"tpsIdle\":3,\"threadCountPark\":8,\"sumTimeTpsMax\":-9223372036854775808,\"sumTimeTpsMin\":9223372036854775807,\"sumTimeTpsAvg\":9.223372036854776E18}", true), "#2");
-    }
-
-    int ret(int needTransaction, String x, boolean create) {
-        WrapJsonToObject<ThreadBalancerStatisticData> wrap = Util.jsonToObject(x, ThreadBalancerStatisticData.class);
-        ThreadBalancerStatisticData stat = wrap.getObject();
-        return AbstractThreadBalancer.getNeedCountThreadByTransaction(stat, needTransaction, true, create);
-    }
 }

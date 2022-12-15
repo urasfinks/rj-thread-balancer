@@ -8,7 +8,7 @@ public interface ThreadBalancer {
 
     ThreadBalancerStatisticData flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
 
-    ThreadBalancerStatisticData getStatisticLastClone(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
+    ThreadBalancerStatisticData getStatisticAggregate(); //Получить срез статистики на текущий момент без сброса, можно использовать всем, кому это надо
 
     void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждую секунду)
 
@@ -33,6 +33,6 @@ public interface ThreadBalancer {
         return l.toArray(new ThreadBalancer[0]);
     }
 
-    int getNeedCountThreadRelease(ThreadBalancerStatisticData stat, boolean create); //Реализация по необходимости потоков
+    boolean isAddThreadCondition(); //Условие добавления новых потоков
 
 }

@@ -54,7 +54,7 @@ public class StatisticThreadBalancer extends AbstractThreadBalancerScheduler {
     @Override
     public <T> Consumer<T> getConsumer() {
         if (debug) {
-            Util.logConsole(Thread.currentThread(), "flushStatistic");
+            Util.logConsole(Thread.currentThread(), "flushStatistic: " + Util.jsonObjectToString(statisticAggregator.flush()));
         }
         return super.getConsumer();
     }

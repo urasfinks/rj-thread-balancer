@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerConsumer;
+import ru.jamsys.thread.balancer.ThreadBalancerSupplier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +27,15 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listThreadBalancer.values());
     }
 
-    public ThreadBalancerConsumer createConsumer(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, long schedulerSleepMillis) {
+    public ThreadBalancerConsumer createConsumer(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, int schedulerSleepMillis) {
         ThreadBalancerConsumer bean = context.getBean(ThreadBalancerConsumer.class);
+        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
+        listThreadBalancer.put(name, bean);
+        return bean;
+    }
+
+    public ThreadBalancerSupplier createSupplier(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, int schedulerSleepMillis) {
+        ThreadBalancerSupplier bean = context.getBean(ThreadBalancerSupplier.class);
         bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
         listThreadBalancer.put(name, bean);
         return bean;
@@ -43,7 +51,7 @@ public class ThreadBalancerFactory {
                 e.printStackTrace();
             }
             try {
-                TimeUnit.MILLISECONDS.sleep(100);
+                TimeUnit.MILLISECONDS.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

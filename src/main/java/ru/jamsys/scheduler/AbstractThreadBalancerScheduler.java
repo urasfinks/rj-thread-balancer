@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler implements SchedulerTick {
 
-    public AbstractThreadBalancerScheduler(String name, int periodMillis) {
+    public AbstractThreadBalancerScheduler(String name, long periodMillis) {
         super(name, periodMillis);
     }
 
