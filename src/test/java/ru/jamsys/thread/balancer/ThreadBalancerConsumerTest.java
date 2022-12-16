@@ -34,28 +34,28 @@ class ThreadBalancerConsumerTest {
     @Test
     void overclocking() { //Проверяем разгон потоков под рост задач
         run(1, 5, 60000L, 1, 10, 5, 500, clone ->
-                Assertions.assertEquals(5, clone.getThreadCount(), "Кол-во потоков должно быть 5")
+                Assertions.assertEquals(5, clone.getThreadPool(), "Кол-во потоков должно быть 5")
         );
     }
 
     @Test
     void damping() { //Проверяем удаление потоков после ненадобности
         run(5, 10, 2000L, 2, 15, 15, 500, clone ->
-                Assertions.assertEquals(5, clone.getThreadCount(), "Должен остаться только 5 потоков")
+                Assertions.assertEquals(5, clone.getThreadPool(), "Должен остаться только 5 потоков")
         );
     }
 
     @Test
     void timeout() { //Проверяем время жизни потоков, после теста они должны все статься
         run(1, 5, 18000L, 1, 5, 5, 500, clone ->
-                Assertions.assertTrue(clone.getThreadCount() == 5, "Кол-во потокв дожно быть больше одного")
+                Assertions.assertTrue(clone.getThreadPool() == 5, "Кол-во потокв дожно быть больше одного")
         );
     }
 
     @Test
     void summaryCount() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
         run(1, 1000, 16000L, 1, 5000, 13, 1000, clone ->
-                Assertions.assertEquals(1000, clone.getThreadCount(), "Кол-во потокв дожно быть 1000")
+                Assertions.assertEquals(1000, clone.getThreadPool(), "Кол-во потокв дожно быть 1000")
         );
     }
 

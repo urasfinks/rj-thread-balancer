@@ -28,7 +28,7 @@ class ThreadBalancerSupplierTest {
     void overclocking() {
         run(1, 10, 2000L, 15, 5, clone -> {
             Assertions.assertTrue(clone.getTpsInput() >= 5 && clone.getTpsInput() < 8, "Должен выдавать минимум 5 tpsInput");
-            Assertions.assertTrue(clone.getThreadCount() >= 3, "Должен был разогнаться минимум в 3 потока"); // 1 поток может выдавать 2tps нам надо 5 => 3 потока минимум
+            Assertions.assertTrue(clone.getThreadPool() >= 3, "Должен был разогнаться минимум в 3 потока"); // 1 поток может выдавать 2tps нам надо 5 => 3 потока минимум
         });
     }
 
@@ -40,7 +40,7 @@ class ThreadBalancerSupplierTest {
 
     @Test
     void testThreadPark() {
-        run(1, 250, 3000L, 20, 250, clone -> {
+        run(1, 250, 3000L, 30, 250, clone -> {
             Assertions.assertTrue(clone.getTpsInput() > 240, "getTpsInput Должно быть более 240 тпс");
             Assertions.assertTrue(clone.getTpsInput() < 260, "getTpsInput Должно быть меньше 260 тпс");
             Assertions.assertTrue(clone.getTpsOutput() > 240, "getTpsOutput Должно быть более 240 тпс");

@@ -14,7 +14,11 @@ public class WrapThread {
     private long lastWakeUp = System.currentTimeMillis();
     private AtomicInteger countIteration = new AtomicInteger(0);
 
+    private boolean fine = false;
+
+
     public void incCountIteration() {
+        fine = true;
         countIteration.incrementAndGet();
     }
 
@@ -23,4 +27,7 @@ public class WrapThread {
         return l.toArray(new WrapThread[0]);
     }
 
+    public boolean getFine() {
+        return fine;
+    }
 }

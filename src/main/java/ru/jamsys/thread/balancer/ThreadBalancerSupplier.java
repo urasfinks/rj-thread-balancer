@@ -2,35 +2,46 @@ package ru.jamsys.thread.balancer;
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import ru.jamsys.Util;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageHandle;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Scope("prototype")
 public class ThreadBalancerSupplier extends AbstractThreadBalancer {
 
+    AtomicBoolean onceTick = new AtomicBoolean(true);
+
+    @Override
+    public void threadStabilizer() {
+        onceTick.set(true);
+        super.threadStabilizer();
+    }
+
     @Override
     public void tick() {
-        //System.out.println("TICK");
-        //Мысль такая, пока есть слоты по inputTps начинать сгружать припаркованные thread до тех пор, пока очередь паркинга не истощится либо не станет расти
-        int max = getThreadSize() / (1000 / (int) schedulerSleepMillis);
-
-        int count = 0;
-        while (tpsInput.get() < tpsInputMax.get()) {
-            int parkSize = threadParkQueue.size();
-
-            if(!wakeUpOnceThreadLast() || threadParkQueue.size() >= parkSize){
-                break;
+        //Были добавлены потоки, потому что балансировщик потоков в какое-то время не справлялся
+        //А потом эти потоки могут переходить в паркинг, потому что не очень то и нужны были
+        //Наша задача делать это плавно, допустим перешли на паркинг 200 потоков, 180 на текущей итарации снова попробуем запустить, а 20 путь отдыхают и ждут ножа
+        if (onceTick.compareAndSet(true, false)) {
+            if (statLastSec.getTpsPark() > 0) {
+                int needThread = new BigDecimal(statLastSec.getTpsPark())
+                        .divide(new BigDecimal(1.1), 2, RoundingMode.HALF_UP)
+                        .setScale(0, RoundingMode.CEILING)
+                        .intValue();
+                for (int i = 0; i < needThread; i++) {
+                    if (!wakeUpOnceThreadLast()) {
+                        break;
+                    }
+                }
+                return;
             }
-            count++;
-            if(count > max){
-                break;
-            }
+            wakeUpOnceThreadLast();
         }
-        //System.out.println("TICK: " + count);
+
     }
 
     @Override
@@ -52,7 +63,7 @@ public class ThreadBalancerSupplier extends AbstractThreadBalancer {
     }
 
     @Override
-    public boolean isAddThreadCondition() {
+    public boolean isAddThreadCondition() { //В очереди нет ждунов, значит все трудятся, накинем ещё
         return threadParkQueue.size() == 0;
     }
 }

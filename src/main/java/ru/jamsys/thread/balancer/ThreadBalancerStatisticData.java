@@ -13,21 +13,25 @@ public class ThreadBalancerStatisticData implements Cloneable {
     @JsonIgnore
     String threadBalancerName;
 
-    int threadCount;
+    int threadPark;
+    int threadPool;
+    int threadRuns;
     int tpsInput;
     int tpsOutput;
     int tpsIdle;
-    int threadCountPark;
+    int tpsPark;
+    int tpsWakeUp;
+    int zTpsThread; //z - что бы она в конце отсортировалас в агрегации отображения статистики
 
-    long sumTimeTpsMax;
-    long sumTimeTpsMin;
-    double sumTimeTpsAvg;
+    //long sumTimeTpsMax;
+    //long sumTimeTpsMin;
+    int timeTpsAvg;
 
     public void setTimeTransaction(ConcurrentLinkedDeque<Long> queue) {
         LongSummaryStatistics avgTimeTps = queue.stream().mapToLong(Long::longValue).summaryStatistics();
-        sumTimeTpsMax = avgTimeTps.getMax();
-        sumTimeTpsMin = avgTimeTps.getMin();
-        sumTimeTpsAvg = avgTimeTps.getAverage();
+        //sumTimeTpsMax = avgTimeTps.getMax();
+        //sumTimeTpsMin = avgTimeTps.getMin();
+        timeTpsAvg = (int) avgTimeTps.getAverage();
     }
 
     @Nullable
