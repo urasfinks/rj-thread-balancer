@@ -13,7 +13,7 @@ import ru.jamsys.message.MessageImpl;
 
 import java.util.function.Consumer;
 
-class ThreadBalancerSupplierTest {
+class ThreadBalancerImplTest {
 
     static ConfigurableApplicationContext context;
 
@@ -53,7 +53,7 @@ class ThreadBalancerSupplierTest {
 
     void run(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
-        ThreadBalancerSupplier test = context.getBean(ThreadBalancerFactory.class).createSupplier("Test", countThreadMin, countThreadMax, maxTps, keepAlive, 333);
+        ThreadBalancerImpl test = context.getBean(ThreadBalancerFactory.class).create("Test", countThreadMin, countThreadMax, maxTps, keepAlive);
         test.setSupplier(() -> {
             Util.sleepMillis(500);
             return new MessageImpl();

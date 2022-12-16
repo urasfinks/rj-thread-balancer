@@ -14,7 +14,7 @@ public class WrapThread {
     private long lastWakeUp = System.currentTimeMillis();
     private AtomicInteger countIteration = new AtomicInteger(0);
 
-    private boolean fine = false;
+    private volatile boolean fine = false;
 
 
     public void incCountIteration() {

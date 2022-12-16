@@ -20,7 +20,7 @@ public interface ThreadBalancer {
 
     void setDebug(boolean b); //Логировние в консоль отладочной информации, применялось только мной, ничего инетерсного там нет, врятли вам пригодится
 
-    void setTpsInputMax(int maxTps); //Установить максимальный предел вызываемых блоков iteration (Я так же вам не советую этого делать)
+    void setTpsMax(int maxTps); //Установить максимальный предел вызываемых блоков iteration (Я так же вам не советую этого делать)
 
     int setResistance(int prc); //Используется только для Supplier для поддержки сопротивления на избыточную нагрузку, для полного понимания - читать описание в реализации
 
@@ -32,7 +32,5 @@ public interface ThreadBalancer {
     public static ThreadBalancer[] toArrayThreadBalancer(List<ThreadBalancer> l) throws Exception { // Маленька защита от конкуретных итераторов с измененеием (НЕ ПАНАЦЕЯ)
         return l.toArray(new ThreadBalancer[0]);
     }
-
-    boolean isAddThreadCondition(); //Условие добавления новых потоков
 
 }

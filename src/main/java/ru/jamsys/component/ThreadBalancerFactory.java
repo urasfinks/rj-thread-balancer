@@ -3,8 +3,7 @@ package ru.jamsys.component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import ru.jamsys.thread.balancer.ThreadBalancer;
-import ru.jamsys.thread.balancer.ThreadBalancerConsumer;
-import ru.jamsys.thread.balancer.ThreadBalancerSupplier;
+import ru.jamsys.thread.balancer.ThreadBalancerImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,16 +26,9 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listThreadBalancer.values());
     }
 
-    public ThreadBalancerConsumer createConsumer(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, int schedulerSleepMillis) {
-        ThreadBalancerConsumer bean = context.getBean(ThreadBalancerConsumer.class);
-        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
-        listThreadBalancer.put(name, bean);
-        return bean;
-    }
-
-    public ThreadBalancerSupplier createSupplier(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis, int schedulerSleepMillis) {
-        ThreadBalancerSupplier bean = context.getBean(ThreadBalancerSupplier.class);
-        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis, schedulerSleepMillis);
+    public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis) {
+        ThreadBalancerImpl bean = context.getBean(ThreadBalancerImpl.class);
+        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis);
         listThreadBalancer.put(name, bean);
         return bean;
     }

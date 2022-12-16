@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 
 class ThreadBalancerConsumerTest {
 
-    static ConfigurableApplicationContext context;
+    /*static ConfigurableApplicationContext context;
 
     @BeforeAll
     static void beforeAll() {
@@ -119,6 +119,6 @@ class ThreadBalancerConsumerTest {
         }
         t1.interrupt();
         context.getBean(ThreadBalancerFactory.class).shutdown("Test");
-    }
+    }*/
 
 }

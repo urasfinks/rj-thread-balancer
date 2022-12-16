@@ -3,18 +3,17 @@ package ru.jamsys.thread.balancer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import org.springframework.context.annotation.Scope;
 import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Component;
 import ru.jamsys.Util;
-import ru.jamsys.WrapJsonToObject;
 import ru.jamsys.message.Message;
-import ru.jamsys.scheduler.SchedulerTick;
-import ru.jamsys.scheduler.SchedulerTickImpl;
+import ru.jamsys.message.MessageHandle;
 import ru.jamsys.thread.balancer.exception.ShutdownException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,30 +24,29 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-public abstract class AbstractThreadBalancer implements ThreadBalancer, SchedulerTick {
+@Component
+@Scope("prototype")
+public class ThreadBalancerImpl extends ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
-    protected boolean debug = false;
+    private boolean debug = false;
 
     @Setter
     @NonNull
-    protected volatile Supplier<Message> supplier = () -> null; //Поставщик входящих сообщений в балансировщик
+    private volatile Supplier<Message> supplier = () -> null; //Поставщик входящих сообщений в балансировщик
 
     @Setter
     @NonNull
-    protected volatile Consumer<Message> consumer = (msg) -> {
+    private volatile Consumer<Message> consumer = (msg) -> {
     }; //Потребитель сообщений представленных поставщиком
 
     @Getter
-    protected String name; //Имя балансировщика - будет отображаться в пуле jmx
+    private String name; //Имя балансировщика - будет отображаться в пуле jmx
 
-    private final int statisticListSize = 10; //Агрегация статистики кол-во секунд
+
     private int threadCountMin; //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
     private AtomicInteger threadCountMax; //Максимальное кол-во потоков, которое может создать балансировщик
     private long threadKeepAlive; //Время жизни потока без работы
-
-    @Getter
-    protected final AtomicInteger tpsInputMax = new AtomicInteger(1); //Максимальное кол-во выданных massage Supplier от всего пула потоков, это величина к которой будет стремиться пул, но из-за задежек Supplier может постоянно колебаться
 
     @Getter
     private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
@@ -57,32 +55,14 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
 
     private final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
     private final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
-    protected final ConcurrentLinkedDeque<WrapThread> threadParkQueue = new ConcurrentLinkedDeque<>(); //Очередь припаркованных потоков
 
-    private final AtomicInteger tpsIdle = new AtomicInteger(0); //Счётчик холостого оборота iteration не зависимо вернёт supplier сообщение или нет
-    protected final AtomicInteger tpsInput = new AtomicInteger(0); //Счётчик вернувшик сообщение supplier
-    protected final AtomicInteger tpsOutput = new AtomicInteger(0); //Счётчик отработанных сообщений Consumer
-    protected final AtomicInteger tpsPark = new AtomicInteger(0); //Счётчик вышедших потоков на паркинг
-    protected final AtomicInteger tpsThreadWakeUp = new AtomicInteger(0); //Счётчик принудительных просыпаний
-
-    protected final ThreadBalancerStatisticData statLastSec = new ThreadBalancerStatisticData(); //Агрегированная статистика за прошлый период (сейчас 1 секунда)
-    protected List<ThreadBalancerStatisticData> statList = new ArrayList<>();
-
-    protected final ConcurrentLinkedDeque<Long> timeTransactionQueue = new ConcurrentLinkedDeque<>(); // Статистика времени транзакций, для расчёта создания новых или пробуждения припаркованных потоков
-
-    protected AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
+    private final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
 
     @Setter
-    protected Function<Integer, Integer> formulaAddCountThread = (need) -> need; //При расчёте необходимого кол-ва потоков, происходит прогон через эту формулу (в дальнейшем для корректировки плавного старта)
+    private Function<Integer, Integer> formulaAddCountThread = (need) -> need; //При расчёте необходимого кол-ва потоков, происходит прогон через эту формулу (в дальнейшем для корректировки плавного старта)
 
     @Setter
-    protected Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
-
-    private SchedulerTickImpl scheduler; //Планировщик тиков
-
-    public int getThreadSize() {
-        return threadList.size();
-    }
+    private Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
 
     @Override
     @Nullable
@@ -94,14 +74,14 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     public void threadStabilizer() { //Вызывается планировщиком StabilizerThread каждую секунду
         //Когда мы ничего не знаем о внешней среде, можно полагаться, только на работу текущих потоков
         Util.logConsole(Thread.currentThread(), "threadStabilizer()");
-        if (isActive()) {
+        if (isActive.get()) {
             try {
-                if (isAddThreadCondition()) {
-                    int addThreadCount = overclocking(formulaAddCountThread.apply(getThreadSize()));
+                if (threadParkQueue.size() == 0) {
+                    int addThreadCount = overclocking(formulaAddCountThread.apply(threadList.size()));
                     if (debug) {
                         Util.logConsole(Thread.currentThread(), "AddThread: " + addThreadCount);
                     }
-                } else if (isThreadRemove()) { //Кол-во потоков больше минимума
+                } else if (threadList.size() > threadCountMin) { //Кол-во потоков больше минимума
                     checkKeepAliveAndRemoveThread();
                 }
             } catch (Exception e) {
@@ -116,45 +96,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     }
 
     public boolean isIteration(WrapThread wrapThread) {
-        return isActive() && wrapThread.getIsRun().get() && tpsInput.get() < tpsInputMax.get();
-    }
-
-    public static ThreadBalancerStatisticData getAvgThreadBalancerStatisticData(List<ThreadBalancerStatisticData> list, boolean debug) {
-        Map<String, List<Object>> agg = new HashMap<>();
-        Map<String, Object> aggResult = new HashMap<>();
-        for (ThreadBalancerStatisticData threadBalancerStatisticData : list) {
-            WrapJsonToObject<Map> mapWrapJsonToObject = Util.jsonToObject(Util.jsonObjectToString(threadBalancerStatisticData), Map.class);
-            Map<String, Object> x = (Map<String, Object>) mapWrapJsonToObject.getObject();
-            for (String key : x.keySet()) {
-                if (!agg.containsKey(key)) {
-                    agg.put(key, new ArrayList<>());
-                }
-                agg.get(key).add(Util.padLeft(x.get(key).toString(), 3));
-            }
-        }
-        if (debug) {
-            Object[] objects = agg.keySet().stream().sorted().toArray();
-            System.out.println("\n-------------------------------------------------------------------------------------------------------------------------------");
-            for (Object o : objects) {
-                System.out.println(Util.padLeft(o.toString(), 10) + ": " + Util.jsonObjectToStringPretty(agg.get(o)).replaceAll("\"", ""));
-            }
-            System.out.println("-------------------------------------------------------------------------------------------------------------------------------\n");
-        }
-        for (String key : agg.keySet()) {
-            Double t = agg.get(key)
-                    .stream()
-                    .mapToDouble(a -> Double.parseDouble(a.toString().trim()))
-                    .average()
-                    .orElse(0.0);
-            aggResult.put(key, t.intValue());
-        }
-        WrapJsonToObject<ThreadBalancerStatisticData> p = Util.jsonToObject(Util.jsonObjectToString(aggResult), ThreadBalancerStatisticData.class);
-        return p.getObject();
-    }
-
-    @Override
-    public void setTpsInputMax(int max) {
-        tpsInputMax.set(max);
+        return isActive.get() && wrapThread.getIsRun().get() && tpsInput.get() <= tpsMax.get() && tpsOutput.get() <= tpsMax.get();
     }
 
     private int getActiveThreadStatistic() {
@@ -168,27 +110,8 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         return counter;
     }
 
-    @Nullable
-    public String getStatisticMomentum() {
-        ThreadBalancerStatisticData curStat = new ThreadBalancerStatisticData();
-        curStat.setThreadBalancerName(getName());
-        curStat.setTpsIdle(tpsIdle.get());
-        curStat.setTpsInput(tpsInput.get());
-        curStat.setTpsOutput(tpsOutput.get());
-        curStat.setThreadPool(threadList.size());
-        curStat.setThreadPark(threadParkQueue.size());
-        curStat.setTpsPark(tpsPark.get());
-        curStat.setTpsWakeUp(tpsThreadWakeUp.get());
-        curStat.setThreadRuns(statLastSec.getThreadRuns());
-        curStat.setZTpsThread(statLastSec.getZTpsThread());
-        //Сумарная статистика дожна браться за более долгое время, поэтому просто копируем
-        //curStat.setSumTimeTpsAvg(statLast.getSumTimeTpsAvg());
-        return Util.jsonObjectToString(curStat);
-    }
-
     @Override
     public ThreadBalancerStatisticData flushStatistic() { //Вызывается планировщиком StatisticThreadBalancer для агрегации статистики за секунду
-        //Предлагаю ничего не навешивать на статистику, каждый должен заниматься своим делом и выполнять всё как надо
         statLastSec.setThreadBalancerName(getName());
         statLastSec.setTpsIdle(tpsIdle.getAndSet(0));
         statLastSec.setTpsInput(tpsInput.getAndSet(0));
@@ -205,21 +128,8 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         if (statList.size() > statisticListSize) {
             statList.remove(0);
         }
-        //loadPool(getThreadSize() / 4);
+        wakeUp();
         return statLastSec;
-    }
-
-    public int getTpsPerThread() { //Получить сколько транзакций делает один поток
-        try {
-            if (statLastSec.getTimeTpsAvg() > 0) {
-                BigDecimal threadTps = new BigDecimal(1000)
-                        .divide(BigDecimal.valueOf(statLastSec.getTimeTpsAvg()), 2, RoundingMode.HALF_UP);
-                return threadTps.intValue();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return 0;
     }
 
     @Override
@@ -236,7 +146,6 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     public void shutdown() throws ShutdownException { //Остановка пула потоков
         Util.logConsole(Thread.currentThread(), "TO SHUTDOWN");
         if (isActive.compareAndSet(true, false)) { //Только один поток будет останавливать
-            scheduler.shutdown();
             long startShutdown = System.currentTimeMillis();
             while (threadList.size() > 0) {
                 try {
@@ -252,7 +161,6 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
                     e.printStackTrace();
                 }
                 if (System.currentTimeMillis() > startShutdown + 30000) { //Пошла жара
-                    //Util.logConsole(Thread.currentThread(), "ERROR SHUTDOWN 30 sec -> throw INTERRUPT");
                     new Exception("ERROR SHUTDOWN 30 sec -> throw INTERRUPT").printStackTrace();
                     try {
                         Stream.of(threadList.toArray(new WrapThread[0])).forEach(threadWrap -> { //Боремся за атамарность конкурентных изменений
@@ -278,36 +186,19 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         }
     }
 
-    protected boolean isThreadRemove() {
-        return threadList.size() > threadCountMin;
-    }
-
-    protected boolean isThreadParkAll() {
-        return threadParkQueue.size() > 0 && threadParkQueue.size() == threadList.size();
-    }
-
-    protected long schedulerSleepMillis = 333;
-
-    public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis, long schedulerSleepMillis) {
-        setTpsInputMax(tpsInputMax);
+    public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis) {
+        this.setTpsMax(tpsInputMax);
         if (isActive.compareAndSet(false, true)) {
             this.name = name;
             this.threadCountMin = threadCountMin;
             this.threadCountMax = new AtomicInteger(threadCountMax);
             this.threadKeepAlive = threadKeepAliveMillis;
-            this.schedulerSleepMillis = schedulerSleepMillis;
-            scheduler = new SchedulerTickImpl(name + "-Scheduler", schedulerSleepMillis);
-            scheduler.run(this);
             overclocking(threadCountMin);
         }
     }
 
-    protected boolean isActive() {
-        return isActive.get();
-    }
-
-    protected boolean wakeUpOnceThreadLast() {
-        while (isActive()) { //Хотел тут добавить проверку, что бы последний на паркинге не забирать, но так низя - иначе ThreadBalancer увеличит потоки, когда в паркинге никого не будет => надо правильно рассчитывать то кол-во, которое реально надо разбудить
+    private boolean wakeUpOnceThreadLast() {
+        while (isActive.get()) { //Хотел тут добавить проверку, что бы последний на паркинге не забирать, но так низя - иначе ThreadBalancer увеличит потоки, когда в паркинге никого не будет => надо правильно рассчитывать то кол-во, которое реально надо разбудить
             WrapThread wrapThread = threadParkQueue.pollLast(); //Всегда забираем с конца, в начале тушаться потоки под нож
             if (wrapThread != null) {
                 //Так как последующая операция перед вставкой в очередь - блокировка
@@ -331,8 +222,8 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         return false;
     }
 
-    protected int overclocking(int count) {
-        if (!isActive() || threadList.size() >= threadCountMax.get()) {
+    private int overclocking(int count) {
+        if (!isActive.get() || threadList.size() >= threadCountMax.get()) {
             return 0;
         }
         int countRealAdd = 0;
@@ -348,12 +239,12 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         return countRealAdd;
     }
 
-    protected boolean addThread() {
-        if (isActive() && threadList.size() < threadCountMax.get()) {
+    private boolean addThread() {
+        if (isActive.get() && threadList.size() < threadCountMax.get()) {
             final ThreadBalancer self = this;
             final WrapThread wrapThread = new WrapThread();
             wrapThread.setThread(new Thread(() -> {
-                while (isActive() && wrapThread.getIsRun().get()) {
+                while (isActive.get() && wrapThread.getIsRun().get()) {
                     try {
                         wrapThread.incCountIteration(); // Это для отслеживания, что поток вообще работает
                         tpsIdle.incrementAndGet();
@@ -380,7 +271,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         return false;
     }
 
-    protected void removeThread(WrapThread wrapThread) {
+    private void removeThread(WrapThread wrapThread) {
         //Кол-во неприкасаемых потоков, которые должно быть
         if (threadList.size() > threadCountMin) {
             forceRemoveThread(wrapThread);
@@ -417,7 +308,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         }
     }
 
-    protected void checkKeepAliveAndRemoveThread() { //Проверка ждунов, что они давно не вызывались и у них кол-во итераций равно 0 -> нож
+    private void checkKeepAliveAndRemoveThread() { //Проверка ждунов, что они давно не вызывались и у них кол-во итераций равно 0 -> нож
         try {
             final long now = System.currentTimeMillis();
             final AtomicInteger maxCounterRemove = new AtomicInteger(formulaRemoveCountThread.apply(1));
@@ -433,6 +324,43 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
             });
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void wakeUp() {
+        //Были добавлены потоки, потому что балансировщик потоков в какое-то время не справлялся
+        //А потом эти потоки могут переходить в паркинг, потому что не очень то и нужны были
+        //Наша задача делать это плавно, допустим перешли на паркинг 200 потоков, 180 на текущей итарации снова попробуем запустить, а 20 путь отдыхают и ждут ножа
+        if (statLastSec.getTpsPark() > 0) {
+            int needThread = new BigDecimal(statLastSec.getTpsPark())
+                    .divide(new BigDecimal("1.1"), 2, RoundingMode.HALF_UP)
+                    .setScale(0, RoundingMode.CEILING)
+                    .intValue();
+            for (int i = 0; i < needThread; i++) {
+                if (!wakeUpOnceThreadLast()) {
+                    break;
+                }
+            }
+            return;
+        }
+        wakeUpOnceThreadLast();
+    }
+
+    @Override
+    public void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer) { //Это то, что выполняется в каждом потоке пула балансировки
+        while (isIteration(wrapThread)) {
+            wrapThread.incCountIteration();
+            long startTime = System.currentTimeMillis();
+            tpsInput.incrementAndGet(); //Короче оно должно быть тут для supplier точно
+            Message message = supplier.get();
+            if (message != null) {
+                message.onHandle(MessageHandle.CREATE, this);
+                consumer.accept(message);
+                timeTransactionQueue.add(System.currentTimeMillis() - startTime);
+                tpsOutput.incrementAndGet();
+            } else {
+                break;
+            }
         }
     }
 
