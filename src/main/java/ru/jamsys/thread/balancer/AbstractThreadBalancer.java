@@ -42,7 +42,7 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
     @Getter
     protected String name; //Имя балансировщика - будет отображаться в пуле jmx
 
-    private int statisticListSize = 10; //Агрегация статистики кол-во секунд
+    private final int statisticListSize = 10; //Агрегация статистики кол-во секунд
     private int threadCountMin; //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
     private AtomicInteger threadCountMax; //Максимальное кол-во потоков, которое может создать балансировщик
     private long threadKeepAlive; //Время жизни потока без работы
@@ -207,34 +207,6 @@ public abstract class AbstractThreadBalancer implements ThreadBalancer, Schedule
         }
         //loadPool(getThreadSize() / 4);
         return statLastSec;
-    }
-
-    public void loadPool(int maxCount) { //Это стартер, будем половину оживлять только
-        //Так как потокам надо время, что бы выйти в режим
-        int count = 0;
-        while (isActive() && tpsInput.get() < tpsInputMax.get()) {
-            if (tpsPark.get() > 0) {
-                if (debug) {
-                    Util.logConsole(Thread.currentThread(), "LoadPool -> STOP by parking [" + count + "]. Stat: " + getStatisticMomentum());
-                }
-                break;
-            }
-            boolean status = wakeUpOnceThreadLast();
-            if (status == false) {
-                if (debug) {
-                    Util.logConsole(Thread.currentThread(), "LoadPool -> STOP by wakeUp [" + count + "]. Stat: " + getStatisticMomentum());
-                }
-                System.out.println("STOP by wakeUp [" + count + "]. Stat: " + getStatisticMomentum());
-                break;
-            }
-            count++;
-            if (count >= maxCount) {
-                if (debug) {
-                    Util.logConsole(Thread.currentThread(), "LoadPool -> STOP by maxCount [" + count + "]. Stat: " + getStatisticMomentum());
-                }
-                break;
-            }
-        }
     }
 
     public int getTpsPerThread() { //Получить сколько транзакций делает один поток
