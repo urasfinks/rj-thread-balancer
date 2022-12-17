@@ -2,6 +2,7 @@ package ru.jamsys.component;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Component;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerCore;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+@Component
 public class ThreadBalancerFactory {
 
     private ApplicationContext context;
