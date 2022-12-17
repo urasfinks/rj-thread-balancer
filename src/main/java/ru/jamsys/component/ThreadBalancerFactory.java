@@ -1,10 +1,10 @@
 package ru.jamsys.component;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import ru.jamsys.App;
 import ru.jamsys.scheduler.SchedulerThreadBalancerStabilizer;
+import ru.jamsys.scheduler.SchedulerThreadBalancerStatistic;
 import ru.jamsys.scheduler.SchedulerThreadBalancerTimeLag;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerCore;
@@ -20,13 +20,20 @@ public class ThreadBalancerFactory {
 
     private final ApplicationContext context;
 
-    public ThreadBalancerFactory(ApplicationContext context) {
+    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator) {
         this.context = context;
-        SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
-        schedulerThreadBalancerTimeLag.setDebug(App.debug);
+        try {
+            SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
+            schedulerThreadBalancerTimeLag.setDebug(App.debug);
 
-        SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = new SchedulerThreadBalancerStabilizer(this);
-        schedulerThreadBalancerStabilizer.setDebug(App.debug);
+            SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = new SchedulerThreadBalancerStabilizer(this);
+            schedulerThreadBalancerStabilizer.setDebug(App.debug);
+
+            SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = new SchedulerThreadBalancerStatistic(this, statisticAggregator);
+            schedulerThreadBalancerStatistic.setDebug(App.debug);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();

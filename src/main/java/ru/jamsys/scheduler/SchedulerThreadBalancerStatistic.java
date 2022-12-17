@@ -1,8 +1,8 @@
-package ru.jamsys.component;
+package ru.jamsys.scheduler;
 
-import org.springframework.stereotype.Component;
 import ru.jamsys.Util;
-import ru.jamsys.scheduler.AbstractThreadBalancerScheduler;
+import ru.jamsys.component.StatisticAggregator;
+import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerStatisticData;
 
@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-@Component
 public class SchedulerThreadBalancerStatistic extends AbstractThreadBalancerScheduler {
 
     final private ThreadBalancerFactory threadBalancerFactory;

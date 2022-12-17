@@ -3,7 +3,6 @@ package ru.jamsys;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
-import ru.jamsys.component.SchedulerThreadBalancerStatistic;
 
 @SpringBootApplication
 public class App {
@@ -17,10 +16,6 @@ public class App {
     }
 
     public static void initContext(ConfigurableApplicationContext context, boolean debug) {
-
-
-        SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = context.getBean(SchedulerThreadBalancerStatistic.class);
-        schedulerThreadBalancerStatistic.setDebug(debug);
 
     }
 
