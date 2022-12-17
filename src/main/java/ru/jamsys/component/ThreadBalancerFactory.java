@@ -18,14 +18,10 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class ThreadBalancerFactory {
 
-    private ApplicationContext context;
+    private final ApplicationContext context;
 
-    @Autowired
-    public void setContext(ApplicationContext context) {
+    public ThreadBalancerFactory(ApplicationContext context) {
         this.context = context;
-    }
-
-    public ThreadBalancerFactory() {
         SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
         schedulerThreadBalancerTimeLag.setDebug(App.debug);
 
