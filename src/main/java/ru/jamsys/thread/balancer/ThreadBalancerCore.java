@@ -85,7 +85,6 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
     @Override
     public void timeLag() { //Убирание секундного лага
         if (threadParkQueue.size() == threadList.size()) {
-            System.out.println("TimeLag");
             wakeUpOnceThreadLast();
         }
     }

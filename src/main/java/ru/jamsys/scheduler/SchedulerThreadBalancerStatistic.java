@@ -15,19 +15,12 @@ import java.util.function.Function;
 
 public class SchedulerThreadBalancerStatistic extends AbstractThreadBalancerScheduler {
 
-    final private ThreadBalancerFactory threadBalancerFactory;
     final private StatisticAggregator statisticAggregator;
 
     public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator) {
-        super("SchedulerThreadBalancerStatistic", 1000);
-        this.threadBalancerFactory = threadBalancerFactory;
+        super("SchedulerThreadBalancerStatistic", 1000, threadBalancerFactory);
         this.statisticAggregator = statisticAggregator;
         run();
-    }
-
-    @Override
-    protected ThreadBalancerFactory getThreadBalancerFactory() {
-        return threadBalancerFactory;
     }
 
     @Override

@@ -11,15 +11,17 @@ import java.util.function.Function;
 
 public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler {
 
-    public AbstractThreadBalancerScheduler(String name, long periodMillis) {
+    final private ThreadBalancerFactory threadBalancerFactory;
+
+    public AbstractThreadBalancerScheduler(String name, long periodMillis, ThreadBalancerFactory threadBalancerFactory) {
         super(name, periodMillis);
+        this.threadBalancerFactory = threadBalancerFactory;
     }
 
     @Override
     public <T> Consumer<T> getConsumer() {
         return (t) -> {
             try {
-                ThreadBalancerFactory threadBalancerFactory = getThreadBalancerFactory();
                 if (threadBalancerFactory != null) {
                     List<Object> objects = Util.forEach(ThreadBalancer.toArrayThreadBalancer(threadBalancerFactory.getListThreadBalancer()), getHandler());
                     Consumer<Object> handler = getResultHandlerList();

@@ -8,17 +8,9 @@ import java.util.function.Function;
 
 public class SchedulerThreadBalancerStabilizer extends AbstractThreadBalancerScheduler {
 
-    final private ThreadBalancerFactory threadBalancerFactory;
-
     public SchedulerThreadBalancerStabilizer(ThreadBalancerFactory threadBalancerFactory) {
-        super("SchedulerThreadBalancerStabilizer", 1000);
-        this.threadBalancerFactory = threadBalancerFactory;
+        super("SchedulerThreadBalancerStabilizer", 1000, threadBalancerFactory);
         run();
-    }
-
-    @Override
-    protected ThreadBalancerFactory getThreadBalancerFactory() {
-        return threadBalancerFactory;
     }
 
     @Override

@@ -8,17 +8,9 @@ import java.util.function.Function;
 
 public class SchedulerThreadBalancerTimeLag extends AbstractThreadBalancerScheduler {
 
-    final private ThreadBalancerFactory threadBalancerFactory;
-
     public SchedulerThreadBalancerTimeLag(ThreadBalancerFactory threadBalancerFactory) {
-        super("SchedulerThreadBalancerTimeLag", 333);
-        this.threadBalancerFactory = threadBalancerFactory;
+        super("SchedulerThreadBalancerTimeLag", 333, threadBalancerFactory);
         run();
-    }
-
-    @Override
-    protected ThreadBalancerFactory getThreadBalancerFactory() {
-        return threadBalancerFactory;
     }
 
     @Override
