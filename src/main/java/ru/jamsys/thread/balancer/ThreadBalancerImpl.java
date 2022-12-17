@@ -29,9 +29,6 @@ import java.util.stream.Stream;
 public class ThreadBalancerImpl extends ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
-    private boolean debug = false;
-
-    @Setter
     @NonNull
     private volatile Supplier<Message> supplier = () -> null; //Поставщик входящих сообщений в балансировщик
 
@@ -42,11 +39,6 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
 
     @Getter
     private String name; //Имя балансировщика - будет отображаться в пуле jmx
-
-
-    private int threadCountMin; //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
-    private AtomicInteger threadCountMax; //Максимальное кол-во потоков, которое может создать балансировщик
-    private long threadKeepAlive; //Время жизни потока без работы
 
     @Getter
     private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
@@ -63,12 +55,6 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
 
     @Setter
     private Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
-
-    @Override
-    @Nullable
-    public ThreadBalancerStatisticData getStatisticAggregate() {
-        return getAvgThreadBalancerStatisticData(new ArrayList<>(statList), debug);
-    }
 
     @Override
     public void threadStabilizer() { //Вызывается планировщиком StabilizerThread каждую секунду

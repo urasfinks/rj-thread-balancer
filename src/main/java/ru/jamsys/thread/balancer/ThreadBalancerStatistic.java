@@ -1,6 +1,8 @@
 package ru.jamsys.thread.balancer;
 
 import lombok.Getter;
+import lombok.Setter;
+import org.springframework.lang.Nullable;
 import ru.jamsys.Util;
 import ru.jamsys.WrapJsonToObject;
 
@@ -14,6 +16,10 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadBalancerStatistic {
+
+    @Setter
+    protected boolean debug = false;
+
     protected final int statisticListSize = 10; //Агрегация статистики кол-во секунд
 
     @Getter
@@ -27,8 +33,14 @@ public class ThreadBalancerStatistic {
     protected final ThreadBalancerStatisticData statLastSec = new ThreadBalancerStatisticData(); //Агрегированная статистика за прошлый период (сейчас 1 секунда)
     protected final List<ThreadBalancerStatisticData> statList = new ArrayList<>();
     protected final ConcurrentLinkedDeque<Long> timeTransactionQueue = new ConcurrentLinkedDeque<>(); // Статистика времени транзакций, для расчёта создания новых или пробуждения припаркованных потоков
+    protected int threadCountMin; //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
+    protected AtomicInteger threadCountMax; //Максимальное кол-во потоков, которое может создать балансировщик
+    protected long threadKeepAlive; //Время жизни потока без работы
 
-
+    @Nullable
+    public ThreadBalancerStatisticData getStatisticAggregate() {
+        return getAvgThreadBalancerStatisticData(new ArrayList<>(statList), debug);
+    }
 
     public void setTpsMax(int max) {
         tpsMax.set(max);
