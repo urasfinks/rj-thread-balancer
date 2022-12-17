@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import ru.jamsys.App;
+import ru.jamsys.scheduler.SchedulerThreadBalancerStabilizer;
 import ru.jamsys.scheduler.SchedulerThreadBalancerTimeLag;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.thread.balancer.ThreadBalancerCore;
@@ -27,6 +28,9 @@ public class ThreadBalancerFactory {
     public ThreadBalancerFactory() {
         SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
         schedulerThreadBalancerTimeLag.setDebug(App.debug);
+
+        SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = new SchedulerThreadBalancerStabilizer(this);
+        schedulerThreadBalancerStabilizer.setDebug(App.debug);
     }
 
     Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();
