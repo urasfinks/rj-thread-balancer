@@ -1,14 +1,13 @@
-package ru.jamsys.component;
+package ru.jamsys.scheduler;
 
-import org.springframework.stereotype.Component;
-import ru.jamsys.scheduler.AbstractThreadBalancerScheduler;
+import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.thread.balancer.ThreadBalancer;
 
 import javax.annotation.PreDestroy;
 import java.util.function.Function;
 
-@Component
 public class SchedulerThreadBalancerTimeLag extends AbstractThreadBalancerScheduler {
+
     final private ThreadBalancerFactory threadBalancerFactory;
 
     public SchedulerThreadBalancerTimeLag(ThreadBalancerFactory threadBalancerFactory) {
