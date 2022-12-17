@@ -13,9 +13,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ThreadBalancerStatistic {
+public abstract class ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
     protected boolean debug = false;
@@ -36,6 +38,11 @@ public class ThreadBalancerStatistic {
     protected int threadCountMin; //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
     protected AtomicInteger threadCountMax; //Максимальное кол-во потоков, которое может создать балансировщик
     protected long threadKeepAlive; //Время жизни потока без работы
+    protected final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
+    protected final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
+    protected final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
+    @Getter
+    private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
 
     @Nullable
     public ThreadBalancerStatisticData getStatisticAggregate() {
@@ -90,6 +97,52 @@ public class ThreadBalancerStatistic {
         }
         WrapJsonToObject<ThreadBalancerStatisticData> p = Util.jsonToObject(Util.jsonObjectToString(aggResult), ThreadBalancerStatisticData.class);
         return p.getObject();
+    }
+
+    private int getActiveThreadStatistic() {
+        int counter = 0;
+        for (WrapThread wrapThread : threadList) {
+            if (wrapThread.getFine()) {
+                counter++;
+            }
+            wrapThread.setFine(false);
+        }
+        return counter;
+    }
+
+    @Override
+    public ThreadBalancerStatisticData flushStatistic() { //Вызывается планировщиком StatisticThreadBalancer для агрегации статистики за секунду
+        statLastSec.setThreadBalancerName(getName());
+        statLastSec.setTpsIdle(tpsIdle.getAndSet(0));
+        statLastSec.setTpsInput(tpsInput.getAndSet(0));
+        statLastSec.setTpsOutput(tpsOutput.getAndSet(0));
+        statLastSec.setThreadPool(threadList.size());
+        statLastSec.setThreadPark(threadParkQueue.size());
+        statLastSec.setTpsPark(tpsPark.getAndSet(0));
+        statLastSec.setTpsWakeUp(tpsThreadWakeUp.getAndSet(0));
+        statLastSec.setTimeTransaction(timeTransactionQueue);
+        statLastSec.setThreadRuns(getActiveThreadStatistic());
+        statLastSec.setZTpsThread(getTpsPerThread());
+        timeTransactionQueue.clear();
+        statList.add(statLastSec.clone());
+        if (statList.size() > statisticListSize) {
+            statList.remove(0);
+        }
+        return statLastSec;
+    }
+
+    public boolean isIteration(WrapThread wrapThread) {
+        return isActive.get() && wrapThread.getIsRun().get() && tpsInput.get() < tpsMax.get() && tpsOutput.get() < tpsMax.get();
+    }
+
+    @Override
+    public void setTestAutoRestoreResistanceTps(boolean status) {
+        autoRestoreResistanceTps.set(status);
+    }
+
+    @Override
+    public int setResistance(int prc) { //Установить процент внешнего сопротивления
+        return 0;
     }
 
 }

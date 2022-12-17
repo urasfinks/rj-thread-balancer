@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import org.springframework.context.annotation.Scope;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import ru.jamsys.Util;
 import ru.jamsys.message.Message;
@@ -14,9 +13,7 @@ import ru.jamsys.thread.balancer.exception.ShutdownException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -26,7 +23,7 @@ import java.util.stream.Stream;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerImpl extends ThreadBalancerStatistic implements ThreadBalancer {
+public class ThreadBalancerCore extends ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
     @NonNull
@@ -40,21 +37,25 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     @Getter
     private String name; //Имя балансировщика - будет отображаться в пуле jmx
 
-    @Getter
-    private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
-
     private final AtomicInteger threadNameCounter = new AtomicInteger(0); //Индекс создаваемого потока, что бы всё красиво было в jmx
-
-    private final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
-    private final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
-
-    private final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
 
     @Setter
     private Function<Integer, Integer> formulaAddCountThread = (need) -> need; //При расчёте необходимого кол-ва потоков, происходит прогон через эту формулу (в дальнейшем для корректировки плавного старта)
 
     @Setter
     private Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
+
+    public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis) {
+        this.setTpsMax(tpsInputMax);
+        if (isActive.compareAndSet(false, true)) {
+            this.name = name;
+            this.threadCountMin = threadCountMin;
+            this.threadCountMax = new AtomicInteger(threadCountMax);
+            this.threadKeepAlive = threadKeepAliveMillis;
+            overclocking(threadCountMin);
+        }
+    }
+
 
     @Override
     public void threadStabilizer() { //Вызывается планировщиком StabilizerThread каждую секунду
@@ -81,51 +82,19 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         }
     }
 
-    public boolean isIteration(WrapThread wrapThread) {
-        return isActive.get() && wrapThread.getIsRun().get() && tpsInput.get() <= tpsMax.get() && tpsOutput.get() <= tpsMax.get();
-    }
-
-    private int getActiveThreadStatistic() {
-        int counter = 0;
-        for (WrapThread wrapThread : threadList) {
-            if (wrapThread.getFine()) {
-                counter++;
-            }
-            wrapThread.setFine(false);
+    @Override
+    public void timeLag() { //Убирание секундного лага
+        if (threadParkQueue.size() == threadList.size()) {
+            System.out.println("TimeLag");
+            wakeUpOnceThreadLast();
         }
-        return counter;
     }
 
     @Override
     public ThreadBalancerStatisticData flushStatistic() { //Вызывается планировщиком StatisticThreadBalancer для агрегации статистики за секунду
-        statLastSec.setThreadBalancerName(getName());
-        statLastSec.setTpsIdle(tpsIdle.getAndSet(0));
-        statLastSec.setTpsInput(tpsInput.getAndSet(0));
-        statLastSec.setTpsOutput(tpsOutput.getAndSet(0));
-        statLastSec.setThreadPool(threadList.size());
-        statLastSec.setThreadPark(threadParkQueue.size());
-        statLastSec.setTpsPark(tpsPark.getAndSet(0));
-        statLastSec.setTpsWakeUp(tpsThreadWakeUp.getAndSet(0));
-        statLastSec.setTimeTransaction(timeTransactionQueue);
-        statLastSec.setThreadRuns(getActiveThreadStatistic());
-        statLastSec.setZTpsThread(getTpsPerThread());
-        timeTransactionQueue.clear();
-        statList.add(statLastSec.clone());
-        if (statList.size() > statisticListSize) {
-            statList.remove(0);
-        }
+        super.flushStatistic();
         wakeUp();
         return statLastSec;
-    }
-
-    @Override
-    public int setResistance(int prc) { //Установить процент внешнего сопротивления
-        return 0;
-    }
-
-    @Override
-    public void setTestAutoRestoreResistanceTps(boolean status) {
-        autoRestoreResistanceTps.set(status);
     }
 
     @Override
@@ -169,17 +138,6 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         }
         if (threadList.size() > 0) {
             throw new ShutdownException("ThreadPoolSize: " + threadList.size());
-        }
-    }
-
-    public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis) {
-        this.setTpsMax(tpsInputMax);
-        if (isActive.compareAndSet(false, true)) {
-            this.name = name;
-            this.threadCountMin = threadCountMin;
-            this.threadCountMax = new AtomicInteger(threadCountMax);
-            this.threadKeepAlive = threadKeepAliveMillis;
-            overclocking(threadCountMin);
         }
     }
 
@@ -264,7 +222,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         }
     }
 
-    synchronized private void forceRemoveThread(WrapThread wrapThread) { //Этот метод может загасит сервис до конца, используйте обычный removeThread
+    synchronized private void forceRemoveThread(WrapThread wrapThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
         WrapThread curWrapThread = wrapThread != null ? wrapThread : threadList.get(0);
         if (curWrapThread != null) {
             int count = 0;
@@ -327,9 +285,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                     break;
                 }
             }
-            return;
         }
-        wakeUpOnceThreadLast();
     }
 
     @Override

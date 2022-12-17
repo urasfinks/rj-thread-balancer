@@ -12,6 +12,8 @@ public interface ThreadBalancer {
 
     void threadStabilizer(); //Вызывается только Планировщиком стабилизации потоков (каждую секунду)
 
+    void timeLag(); //Вызывается только планировщиком SchedulerThreadBalancerTimeLag, который дёргает этот метод 3 раза в секунду
+
     String getName(); //Имя пула балансировки
 
     void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer); //Вызывается созданными потоками, для непосредственного вызова ваших функциональных блоков. Для вас это бесполезный метод

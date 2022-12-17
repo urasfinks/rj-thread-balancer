@@ -1,19 +1,18 @@
 package ru.jamsys.component;
 
 import org.springframework.stereotype.Component;
-import ru.jamsys.thread.balancer.ThreadBalancer;
 import ru.jamsys.scheduler.AbstractThreadBalancerScheduler;
+import ru.jamsys.thread.balancer.ThreadBalancer;
 
 import javax.annotation.PreDestroy;
 import java.util.function.Function;
 
 @Component
-public class StabilizerThread extends AbstractThreadBalancerScheduler {
-
+public class SchedulerThreadBalancerTimeLag extends AbstractThreadBalancerScheduler {
     final private ThreadBalancerFactory threadBalancerFactory;
 
-    public StabilizerThread(ThreadBalancerFactory threadBalancerFactory) {
-        super("StabilizerThread", 1000);
+    public SchedulerThreadBalancerTimeLag(ThreadBalancerFactory threadBalancerFactory) {
+        super("SchedulerThreadBalancerTimeLag", 333);
         this.threadBalancerFactory = threadBalancerFactory;
         run();
     }
@@ -26,7 +25,7 @@ public class StabilizerThread extends AbstractThreadBalancerScheduler {
     @Override
     protected Function<ThreadBalancer, Object> getHandler() {
         return consumer -> {
-            consumer.threadStabilizer();
+            consumer.timeLag();
             return null;
         };
     }
@@ -35,5 +34,4 @@ public class StabilizerThread extends AbstractThreadBalancerScheduler {
     public void destroy() {
         super.shutdown();
     }
-
 }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler implements SchedulerTick {
+public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler {
 
     public AbstractThreadBalancerScheduler(String name, long periodMillis) {
         super(name, periodMillis);
@@ -30,11 +30,6 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            try {
-                tick();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         };
     }
 
@@ -51,11 +46,6 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
     @Nullable
     protected Consumer<Object> getResultHandlerList() {
         return null;
-    }
-
-    @Override
-    public void tick() {
-
     }
 
 }

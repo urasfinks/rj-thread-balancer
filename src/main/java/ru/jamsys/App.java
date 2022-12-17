@@ -3,8 +3,9 @@ package ru.jamsys;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
-import ru.jamsys.component.StabilizerThread;
-import ru.jamsys.component.StatisticThreadBalancer;
+import ru.jamsys.component.SchedulerThreadBalancerStabilizer;
+import ru.jamsys.component.SchedulerThreadBalancerStatistic;
+import ru.jamsys.component.SchedulerThreadBalancerTimeLag;
 
 @SpringBootApplication
 public class App {
@@ -17,11 +18,14 @@ public class App {
     }
 
     public static void initContext(ConfigurableApplicationContext context, boolean debug) {
-        StabilizerThread stabilizerThread = context.getBean(StabilizerThread.class);
-        stabilizerThread.setDebug(debug);
+        SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = context.getBean(SchedulerThreadBalancerStabilizer.class);
+        schedulerThreadBalancerStabilizer.setDebug(debug);
 
-        StatisticThreadBalancer statisticThreadBalancer = context.getBean(StatisticThreadBalancer.class);
-        statisticThreadBalancer.setDebug(debug);
+        SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = context.getBean(SchedulerThreadBalancerStatistic.class);
+        schedulerThreadBalancerStatistic.setDebug(debug);
+
+        SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = context.getBean(SchedulerThreadBalancerTimeLag.class);
+        schedulerThreadBalancerTimeLag.setDebug(debug);
     }
 
 }

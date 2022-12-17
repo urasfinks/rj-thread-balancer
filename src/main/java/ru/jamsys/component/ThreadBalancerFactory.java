@@ -3,7 +3,7 @@ package ru.jamsys.component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import ru.jamsys.thread.balancer.ThreadBalancer;
-import ru.jamsys.thread.balancer.ThreadBalancerImpl;
+import ru.jamsys.thread.balancer.ThreadBalancerCore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +26,8 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listThreadBalancer.values());
     }
 
-    public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis) {
-        ThreadBalancerImpl bean = context.getBean(ThreadBalancerImpl.class);
+    public ThreadBalancerCore create(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis) {
+        ThreadBalancerCore bean = context.getBean(ThreadBalancerCore.class);
         bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis);
         listThreadBalancer.put(name, bean);
         return bean;

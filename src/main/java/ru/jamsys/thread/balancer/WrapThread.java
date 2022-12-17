@@ -16,7 +16,6 @@ public class WrapThread {
 
     private volatile boolean fine = false;
 
-
     public void incCountIteration() {
         fine = true;
         countIteration.incrementAndGet();

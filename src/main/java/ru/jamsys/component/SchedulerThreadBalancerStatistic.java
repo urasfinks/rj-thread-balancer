@@ -14,13 +14,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Component
-public class StatisticThreadBalancer extends AbstractThreadBalancerScheduler {
+public class SchedulerThreadBalancerStatistic extends AbstractThreadBalancerScheduler {
 
     final private ThreadBalancerFactory threadBalancerFactory;
     final private StatisticAggregator statisticAggregator;
 
-    public StatisticThreadBalancer(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator) {
-        super("StatisticThreadBalancer", 1000);
+    public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator) {
+        super("SchedulerThreadBalancerStatistic", 1000);
         this.threadBalancerFactory = threadBalancerFactory;
         this.statisticAggregator = statisticAggregator;
         run();
