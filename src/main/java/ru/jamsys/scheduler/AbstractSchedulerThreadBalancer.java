@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler {
+public abstract class AbstractSchedulerThreadBalancer extends AbstractScheduler {
 
     final private ThreadBalancerFactory threadBalancerFactory;
 
-    public AbstractThreadBalancerScheduler(String name, long periodMillis, ThreadBalancerFactory threadBalancerFactory) {
+    public AbstractSchedulerThreadBalancer(String name, long periodMillis, ThreadBalancerFactory threadBalancerFactory) {
         super(name, periodMillis);
         this.threadBalancerFactory = threadBalancerFactory;
     }
@@ -33,11 +33,6 @@ public abstract class AbstractThreadBalancerScheduler extends AbstractScheduler 
                 e.printStackTrace();
             }
         };
-    }
-
-    @Nullable
-    protected ThreadBalancerFactory getThreadBalancerFactory() {
-        return null;
     }
 
     @Nullable

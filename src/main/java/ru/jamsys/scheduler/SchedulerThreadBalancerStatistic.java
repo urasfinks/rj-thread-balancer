@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class SchedulerThreadBalancerStatistic extends AbstractThreadBalancerScheduler {
+public class SchedulerThreadBalancerStatistic extends AbstractSchedulerThreadBalancer {
 
     final private StatisticAggregator statisticAggregator;
 

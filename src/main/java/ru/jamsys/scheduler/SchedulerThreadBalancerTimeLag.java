@@ -6,7 +6,7 @@ import ru.jamsys.thread.balancer.ThreadBalancer;
 import javax.annotation.PreDestroy;
 import java.util.function.Function;
 
-public class SchedulerThreadBalancerTimeLag extends AbstractThreadBalancerScheduler {
+public class SchedulerThreadBalancerTimeLag extends AbstractSchedulerThreadBalancer {
 
     public SchedulerThreadBalancerTimeLag(ThreadBalancerFactory threadBalancerFactory) {
         super("SchedulerThreadBalancerTimeLag", 333, threadBalancerFactory);

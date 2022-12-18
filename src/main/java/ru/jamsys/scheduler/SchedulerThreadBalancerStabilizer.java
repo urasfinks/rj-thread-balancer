@@ -6,7 +6,7 @@ import ru.jamsys.thread.balancer.ThreadBalancer;
 import javax.annotation.PreDestroy;
 import java.util.function.Function;
 
-public class SchedulerThreadBalancerStabilizer extends AbstractThreadBalancerScheduler {
+public class SchedulerThreadBalancerStabilizer extends AbstractSchedulerThreadBalancer {
 
     public SchedulerThreadBalancerStabilizer(ThreadBalancerFactory threadBalancerFactory) {
         super("SchedulerThreadBalancerStabilizer", 1000, threadBalancerFactory);
