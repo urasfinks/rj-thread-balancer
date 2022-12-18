@@ -12,6 +12,7 @@ import ru.jamsys.thread.balancer.ThreadBalancerCore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -42,29 +43,38 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listThreadBalancer.values());
     }
 
-    public ThreadBalancerCore create(String name, int countThreadMin, int countThreadMax, int tpsInputMax, long keepAliveMillis) {
+    public ThreadBalancerCore create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
         ThreadBalancerCore bean = context.getBean(ThreadBalancerCore.class);
-        bean.configure(name, countThreadMin, countThreadMax, tpsInputMax, keepAliveMillis);
+        bean.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis, supplierIdleInputTps);
         listThreadBalancer.put(name, bean);
         return bean;
     }
 
+    public void shutdown() {
+        Set<String> strings = listThreadBalancer.keySet();
+        for (String name : strings) {
+            shutdown(name);
+        }
+    }
+
     public void shutdown(String name) {
         ThreadBalancer cs = listThreadBalancer.get(name);
-        while (true) {
-            try {// Так как shutdown публичный метод, его может вызвать кто-то другой, поэтому будем ждать пока сервис остановится
-                cs.shutdown();
-                break;
-            } catch (Exception e) {
-                e.printStackTrace();
+        if (cs != null) {
+            while (true) {
+                try {// Так как shutdown публичный метод, его может вызвать кто-то другой, поэтому будем ждать пока сервис остановится
+                    cs.shutdown();
+                    break;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    TimeUnit.MILLISECONDS.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-            try {
-                TimeUnit.MILLISECONDS.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            listThreadBalancer.remove(name);
         }
-        listThreadBalancer.remove(name);
     }
 
 }

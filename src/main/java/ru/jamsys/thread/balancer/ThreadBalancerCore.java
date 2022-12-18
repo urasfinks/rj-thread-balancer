@@ -37,6 +37,8 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
     @Getter
     private String name; //Имя балансировщика - будет отображаться в пуле jmx
 
+    private boolean supplierIdleInputTps = true; //Считать холостую отработку поставщика как успешную входящий TPS
+
     private final AtomicInteger threadNameCounter = new AtomicInteger(0); //Индекс создаваемого потока, что бы всё красиво было в jmx
 
     @Setter
@@ -45,8 +47,12 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
     @Setter
     private Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
 
-    public void configure(String name, int threadCountMin, int threadCountMax, int tpsInputMax, long threadKeepAliveMillis) {
-        this.setTpsMax(tpsInputMax);
+    @Setter
+    private volatile boolean correctTimeLag = true;
+
+    public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis, boolean supplierIdleInputTps) {
+        this.supplierIdleInputTps = supplierIdleInputTps;
+        this.setTpsMax(tpsMax);
         if (isActive.compareAndSet(false, true)) {
             this.name = name;
             this.threadCountMin = threadCountMin;
@@ -84,7 +90,7 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
 
     @Override
     public void timeLag() { //Убирание секундного лага
-        if (threadParkQueue.size() == threadList.size()) {
+        if (correctTimeLag && threadParkQueue.size() == threadList.size()) {
             wakeUpOnceThreadLast();
         }
     }
@@ -92,7 +98,7 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
     @Override
     public ThreadBalancerStatisticData flushStatistic() { //Вызывается планировщиком StatisticThreadBalancer для агрегации статистики за секунду
         super.flushStatistic();
-        wakeUp();
+        runThreadPark();
         return statLastSec;
     }
 
@@ -140,7 +146,7 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
         }
     }
 
-    private boolean wakeUpOnceThreadLast() {
+    public boolean wakeUpOnceThreadLast() {
         while (isActive.get()) { //Хотел тут добавить проверку, что бы последний на паркинге не забирать, но так низя - иначе ThreadBalancer увеличит потоки, когда в паркинге никого не будет => надо правильно рассчитывать то кол-во, которое реально надо разбудить
             WrapThread wrapThread = threadParkQueue.pollLast(); //Всегда забираем с конца, в начале тушаться потоки под нож
             if (wrapThread != null) {
@@ -187,7 +193,7 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
             final ThreadBalancer self = this;
             final WrapThread wrapThread = new WrapThread();
             wrapThread.setThread(new Thread(() -> {
-                while (isActive.get() && wrapThread.getIsRun().get()) {
+                while (!wrapThread.getThread().isInterrupted() && isActive.get() && wrapThread.getIsRun().get()) {
                     try {
                         wrapThread.incCountIteration(); // Это для отслеживания, что поток вообще работает
                         tpsIdle.incrementAndGet();
@@ -270,10 +276,10 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
         }
     }
 
-    public void wakeUp() {
-        //Были добавлены потоки, потому что балансировщик потоков в какое-то время не справлялся
-        //А потом эти потоки могут переходить в паркинг, потому что не очень то и нужны были
-        //Наша задача делать это плавно, допустим перешли на паркинг 200 потоков, 180 на текущей итарации снова попробуем запустить, а 20 путь отдыхают и ждут ножа
+    private void runThreadPark() {
+        //Когда потоки уезжат в паркинг их надо каждую секунду восстанавливать, они ведь были не просто так созданны
+        //Наша задача делать плавное восстановление, так как и в паркинг они ушли не просто так
+        //Допустим в паркинг упало 200 потоков, 180 на текущей итарации снова попробуем запустить, а 20 путь отдыхают и ждут ножа
         if (statLastSec.getTpsPark() > 0) {
             int needThread = new BigDecimal(statLastSec.getTpsPark())
                     .divide(new BigDecimal("1.1"), 2, RoundingMode.HALF_UP)
@@ -292,10 +298,16 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
         while (isIteration(wrapThread)) {
             wrapThread.incCountIteration();
             long startTime = System.currentTimeMillis();
-            tpsInput.incrementAndGet(); //Короче оно должно быть тут для supplier точно
+            if (supplierIdleInputTps) {
+                tpsInput.incrementAndGet(); //Короче оно должно быть тут для supplier точно
+            }
             Message message = supplier.get();
             if (message != null) {
-                message.onHandle(MessageHandle.CREATE, this);
+                if (supplierIdleInputTps) {
+                    message.onHandle(MessageHandle.CREATE, this);
+                } else {
+                    tpsInput.incrementAndGet();
+                }
                 consumer.accept(message);
                 timeTransactionQueue.add(System.currentTimeMillis() - startTime);
                 tpsOutput.incrementAndGet();

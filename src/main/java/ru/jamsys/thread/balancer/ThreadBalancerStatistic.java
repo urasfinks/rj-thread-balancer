@@ -21,10 +21,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
     protected boolean debug = false;
-
     protected final int statisticListSize = 10; //Агрегация статистики кол-во секунд
-
-    @Getter
     protected final AtomicInteger tpsMax = new AtomicInteger(1); //Максимальное кол-во выданных massage Supplier от всего пула потоков, это величина к которой будет стремиться пул, но из-за задежек Supplier может постоянно колебаться
     protected final ConcurrentLinkedDeque<WrapThread> threadParkQueue = new ConcurrentLinkedDeque<>(); //Очередь припаркованных потоков
     protected final AtomicInteger tpsIdle = new AtomicInteger(0); //Счётчик холостого оборота iteration не зависимо вернёт supplier сообщение или нет
@@ -41,6 +38,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     protected final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
     protected final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
     protected final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
+
     @Getter
     private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
 
@@ -49,11 +47,13 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         return getAvgThreadBalancerStatisticData(new ArrayList<>(statList), debug);
     }
 
+    @Override
     public void setTpsMax(int max) {
         tpsMax.set(max);
     }
 
     public int getTpsPerThread() { //Получить сколько транзакций делает один поток
+        //Если время supplier и consumer будут очень быстрыми (равно 0, а микро секунды мы не считаем) то расчёт кол-ва потоков будет не верный, а именно равен -1
         try {
             if (statLastSec.getTimeTpsAvg() > 0) {
                 BigDecimal threadTps = new BigDecimal(1000)
@@ -63,7 +63,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return 0;
+        return -1; //Не смогли рассчитать, так как время нулевое (как минимум это может быть в быстроте операций, а мы MicroTime не считаем)
     }
 
     public static ThreadBalancerStatisticData getAvgThreadBalancerStatisticData(List<ThreadBalancerStatisticData> list, boolean debug) {

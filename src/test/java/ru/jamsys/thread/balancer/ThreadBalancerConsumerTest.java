@@ -12,7 +12,6 @@ import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageImpl;
 import ru.jamsys.thread.balancer.exception.ShutdownException;
-import ru.jamsys.thread.balancer.exception.TpsOverflowException;
 
 import java.util.ArrayList;
 import java.util.List;

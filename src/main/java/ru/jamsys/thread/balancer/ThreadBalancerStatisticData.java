@@ -21,7 +21,7 @@ public class ThreadBalancerStatisticData implements Cloneable {
     int tpsIdle;
     int tpsPark;
     int tpsWakeUp;
-    int zTpsThread; //z - что бы она в конце отсортировалас в агрегации отображения статистики
+    int zTpsThread; //z - что бы она в конце отсортировалась в агрегации отображения статистики
 
     //long sumTimeTpsMax;
     //long sumTimeTpsMin;
