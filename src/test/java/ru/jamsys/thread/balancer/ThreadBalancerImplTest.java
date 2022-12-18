@@ -76,12 +76,37 @@ class ThreadBalancerImplTest {
     }
 
     @Test
-    void firstConsumerTest(){
-        runConsumer(1, 10, 12, 1, 5, 500, 60000L, clone ->
-                Assertions.assertEquals(5, clone.getPool(), "Кол-во потоков должно быть 5"));
+    void overclockingConsumer(){
+        runConsumer(1, 5, 60000L, 1, 10, 12, 500, clone ->
+                Assertions.assertEquals(5, clone.getPool(), "Кол-во потоков должно быть 5")
+        );
     }
 
-    void runConsumer(int countIteration, int countMessage, int timeTestSec, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    @Test
+    void dampingConsumer() { //Проверяем удаление потоков после ненадобности
+        runConsumer(5, 10, 2000L, 2, 15, 25, 500, clone ->
+                Assertions.assertEquals(5, clone.getPool(), "Должен остаться только 5 потоков")
+        );
+    }
+
+    @Test
+    void timeoutConsumer() { //Проверяем время жизни потоков, после теста они должны все статься
+        runConsumer(1, 5, 18000L, 1, 5, 12, 500, clone ->
+                Assertions.assertTrue(clone.getPool() == 5, "Кол-во потокв дожно быть равно 5")
+        );
+    }
+
+    @Test
+    void summaryCountConsumer() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
+        runConsumer(1, 1000, 16000L, 1, 5000, 20, 1000, clone ->
+                Assertions.assertEquals(1000, clone.getPool(), "Кол-во потокв дожно быть 1000")
+        );
+    }
+
+
+    //void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int timeTestSec, int tpsInputMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    //void runConsumer(int countIteration, int countMessage, int timeTestSec, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    void runConsumer(int countThreadMin, int countThreadMax, long keepAliveMillis, int countIteration, int countMessage, int timeTestSec, int tpsMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
 
         Util.logConsole(Thread.currentThread(), "Start test");
         ConcurrentLinkedDeque<Message> queue = new ConcurrentLinkedDeque();
