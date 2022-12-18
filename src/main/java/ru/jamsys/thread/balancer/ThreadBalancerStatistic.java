@@ -8,11 +8,9 @@ import ru.jamsys.WrapJsonToObject;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +19,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
     protected boolean debug = false;
-    protected final int statisticListSize = 10; //Агрегация статистики кол-во секунд
+    protected final int statisticListSize = 10; //Агрегация статистики кол-во секунд (по умолчанию 10 должно быть)
     protected final AtomicInteger tpsMax = new AtomicInteger(1); //Максимальное кол-во выданных massage Supplier от всего пула потоков, это величина к которой будет стремиться пул, но из-за задежек Supplier может постоянно колебаться
     protected final ConcurrentLinkedDeque<WrapThread> threadParkQueue = new ConcurrentLinkedDeque<>(); //Очередь припаркованных потоков
     protected final AtomicInteger tpsIdle = new AtomicInteger(0); //Счётчик холостого оборота iteration не зависимо вернёт supplier сообщение или нет
@@ -38,6 +36,8 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     protected final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
     protected final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
     protected final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение выставленного сопротивления, на каждом тике будет уменьшаться (авто коррекция на прежний уровень)
+    protected final AtomicInteger poolAdd = new AtomicInteger(0);
+    protected final ConcurrentLinkedQueue<WrapThread> poolRemove = new ConcurrentLinkedQueue();
 
     @Getter
     private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
@@ -67,23 +67,34 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     public static ThreadBalancerStatisticData getAvgThreadBalancerStatisticData(List<ThreadBalancerStatisticData> list, boolean debug) {
-        Map<String, List<Object>> agg = new HashMap<>();
+        Map<String, List<Object>> agg = new LinkedHashMap<>();
         Map<String, Object> aggResult = new HashMap<>();
+        int maxKey = 0;
         for (ThreadBalancerStatisticData threadBalancerStatisticData : list) {
             WrapJsonToObject<Map> mapWrapJsonToObject = Util.jsonToObject(Util.jsonObjectToString(threadBalancerStatisticData), Map.class);
             Map<String, Object> x = (Map<String, Object>) mapWrapJsonToObject.getObject();
+            int maxValue = 0;
+
+            for (String key : x.keySet()) {
+                if(maxValue < x.get(key).toString().length()){
+                    maxValue = x.get(key).toString().length();
+                }
+            }
             for (String key : x.keySet()) {
                 if (!agg.containsKey(key)) {
                     agg.put(key, new ArrayList<>());
                 }
-                agg.get(key).add(Util.padLeft(x.get(key).toString(), 3));
+                if(maxKey < key.length()){
+                    maxKey = key.length();
+                }
+                agg.get(key).add(Util.padLeft(x.get(key).toString(), maxValue));
             }
         }
         if (debug) {
-            Object[] objects = agg.keySet().stream().sorted().toArray();
+            Object[] objects = agg.keySet().stream().toArray();
             System.out.println("\n-------------------------------------------------------------------------------------------------------------------------------");
             for (Object o : objects) {
-                System.out.println(Util.padLeft(o.toString(), 10) + ": " + Util.jsonObjectToStringPretty(agg.get(o)).replaceAll("\"", ""));
+                System.out.println(Util.padLeft(o.toString(), maxKey) + ": " + Util.jsonObjectToStringPretty(agg.get(o)).replaceAll("\"", ""));
             }
             System.out.println("-------------------------------------------------------------------------------------------------------------------------------\n");
         }
@@ -113,17 +124,23 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     @Override
     public ThreadBalancerStatisticData flushStatistic() { //Вызывается планировщиком StatisticThreadBalancer для агрегации статистики за секунду
         statLastSec.setThreadBalancerName(getName());
-        statLastSec.setTpsIdle(tpsIdle.getAndSet(0));
-        statLastSec.setTpsInput(tpsInput.getAndSet(0));
-        statLastSec.setTpsOutput(tpsOutput.getAndSet(0));
-        statLastSec.setThreadPool(threadList.size());
-        statLastSec.setThreadPark(threadParkQueue.size());
-        statLastSec.setTpsPark(tpsPark.getAndSet(0));
-        statLastSec.setTpsWakeUp(tpsThreadWakeUp.getAndSet(0));
+        statLastSec.setIdle(tpsIdle.getAndSet(0));
+        statLastSec.setInput(tpsInput.getAndSet(0));
+        statLastSec.setOutput(tpsOutput.getAndSet(0));
+        statLastSec.setPool(threadList.size());
+        statLastSec.setPark(threadParkQueue.size());
+        statLastSec.setParkIn(tpsPark.getAndSet(0));
+        statLastSec.setWakeUp(tpsThreadWakeUp.getAndSet(0));
+        statLastSec.setRun(getActiveThreadStatistic());
+        statLastSec.setOneThreadTps(getTpsPerThread());
+        statLastSec.setAdd(poolAdd.getAndSet(0));
+
         statLastSec.setTimeTransaction(timeTransactionQueue);
-        statLastSec.setThreadRuns(getActiveThreadStatistic());
-        statLastSec.setZTpsThread(getTpsPerThread());
         timeTransactionQueue.clear();
+
+        statLastSec.setRemove(poolRemove.size());
+        poolRemove.clear();
+
         statList.add(statLastSec.clone());
         if (statList.size() > statisticListSize) {
             statList.remove(0);
@@ -131,8 +148,12 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         return statLastSec;
     }
 
-    public boolean isIteration(WrapThread wrapThread) {
-        return isActive.get() && wrapThread.getIsRun().get() && tpsInput.get() < tpsMax.get() && tpsOutput.get() < tpsMax.get();
+    public boolean isIterationWrapThread(WrapThread wrapThread) {
+        return wrapThread.getIsRun().get() && isIteration();
+    }
+
+    public boolean isIteration() {
+        return isActive.get() && tpsInput.get() < tpsMax.get() && tpsOutput.get() < tpsMax.get();
     }
 
     @Override

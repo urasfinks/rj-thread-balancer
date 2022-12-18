@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 @Component
 @Scope("prototype")
-public class ThreadBalancerCore extends ThreadBalancerStatistic implements ThreadBalancer {
+public class ThreadBalancerImpl extends ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
     @NonNull
@@ -66,14 +66,14 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
     @Override
     public void threadStabilizer() { //Вызывается планировщиком StabilizerThread каждую секунду
         //Когда мы ничего не знаем о внешней среде, можно полагаться, только на работу текущих потоков
-        Util.logConsole(Thread.currentThread(), "threadStabilizer()");
+        //Util.logConsole(Thread.currentThread(), "threadStabilizer()");
         if (isActive.get()) {
             try {
                 if (threadParkQueue.size() == 0) {
-                    int addThreadCount = overclocking(formulaAddCountThread.apply(threadList.size()));
-                    if (debug) {
-                        Util.logConsole(Thread.currentThread(), "AddThread: " + addThreadCount);
-                    }
+                    overclocking(formulaAddCountThread.apply(threadList.size()));
+//                    if (debug) {
+//                        Util.logConsole(Thread.currentThread(), "AddThread: " + addThreadCount);
+//                    }
                 } else if (threadList.size() > threadCountMin) { //Кол-во потоков больше минимума
                     checkKeepAliveAndRemoveThread();
                 }
@@ -90,7 +90,8 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
 
     @Override
     public void timeLag() { //Убирание секундного лага
-        if (correctTimeLag && threadParkQueue.size() == threadList.size()) {
+        //if (correctTimeLag && threadParkQueue.size() == threadList.size()) {
+        if (correctTimeLag && isIteration()) {
             wakeUpOnceThreadLast();
         }
     }
@@ -110,7 +111,7 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
             while (threadList.size() > 0) {
                 try {
                     WrapThread wrapThread = threadParkQueue.getFirst(); //Замысел такой, что бы выцеплять только заверенные процессы
-                    forceRemoveThread(wrapThread);
+                    removeThread(wrapThread, false);
                 } catch (NoSuchElementException e) { //Если нет в отстойнике - подождём немного
                     try {
                         TimeUnit.MILLISECONDS.sleep(100);
@@ -206,13 +207,10 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
                         e.printStackTrace();
                     }
                 }
-                try {
-                    forceRemoveThread(wrapThread);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                removeThread(wrapThread, true);
             }));
             wrapThread.getThread().setName(getName() + "-" + threadNameCounter.getAndIncrement());
+            poolAdd.incrementAndGet();
             threadList.add(wrapThread);
             wrapThread.getThread().start();
             return true;
@@ -220,52 +218,38 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
         return false;
     }
 
-    private void removeThread(WrapThread wrapThread) {
+    private void safeRemoveThread(@NonNull WrapThread wrapThread) {
         //Кол-во неприкасаемых потоков, которые должно быть
         if (threadList.size() > threadCountMin) {
-            forceRemoveThread(wrapThread);
+            removeThread(wrapThread, false);
         }
     }
 
-    synchronized private void forceRemoveThread(WrapThread wrapThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
-        WrapThread curWrapThread = wrapThread != null ? wrapThread : threadList.get(0);
-        if (curWrapThread != null) {
-            int count = 0;
-            while (true) {
-                count++;
-                if (count > 3) {
-                    break;
-                }
-                try {
-                    curWrapThread.getIsRun().set(false);
-                    LockSupport.unpark(curWrapThread.getThread()); //Мы его оживляем, что бы он закончился
-                    threadList.remove(curWrapThread);
-                    threadParkQueue.remove(curWrapThread); // На всякий случай
-                    if (debug) {
-                        Util.logConsole(Thread.currentThread(), "removeThread: " + curWrapThread);
-                    }
-                    break;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                try {
-                    TimeUnit.MILLISECONDS.sleep(333);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+    synchronized private void removeThread(@NonNull WrapThread wrapThread, boolean innerThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
+        wrapThread.getIsRun().set(false);
+        if (!innerThread) { //Если этот метод вызывается из самого потока, не надо его дополнительно выводить из парковки
+            try {
+                LockSupport.unpark(wrapThread.getThread()); //Мы его оживляем, что бы он закончился
+            } catch (Exception e) {
+                e.printStackTrace();
             }
+        }
+        threadList.remove(wrapThread);
+        threadParkQueue.remove(wrapThread); // На всякий случай
+        if (!poolRemove.contains(wrapThread)) {
+            poolRemove.add(wrapThread);
         }
     }
 
     private void checkKeepAliveAndRemoveThread() { //Проверка ждунов, что они давно не вызывались и у них кол-во итераций равно 0 -> нож
         try {
-            final long now = System.currentTimeMillis();
+            final long curTimeMillis = System.currentTimeMillis();
             final AtomicInteger maxCounterRemove = new AtomicInteger(formulaRemoveCountThread.apply(1));
             Util.forEach(WrapThread.toArrayWrapThread(threadList), (wrapThread) -> {
                 long future = wrapThread.getLastWakeUp() + threadKeepAlive;
                 //Время последнего оживления превысило keepAlive + поток реально не работал
-                if (now > future && wrapThread.getCountIteration().get() == 0 && maxCounterRemove.getAndDecrement() > 0) {
-                    removeThread(wrapThread);
+                if (curTimeMillis > future && wrapThread.getCountIteration().get() == 0 && maxCounterRemove.getAndDecrement() > 0) {
+                    safeRemoveThread(wrapThread);
                 } else {
                     wrapThread.getCountIteration().set(0);
                 }
@@ -280,22 +264,29 @@ public class ThreadBalancerCore extends ThreadBalancerStatistic implements Threa
         //Когда потоки уезжат в паркинг их надо каждую секунду восстанавливать, они ведь были не просто так созданны
         //Наша задача делать плавное восстановление, так как и в паркинг они ушли не просто так
         //Допустим в паркинг упало 200 потоков, 180 на текущей итарации снова попробуем запустить, а 20 путь отдыхают и ждут ножа
-        if (statLastSec.getTpsPark() > 0) {
-            int needThread = new BigDecimal(statLastSec.getTpsPark())
+        if (statLastSec.getParkIn() > 0) {
+            int needThread = new BigDecimal(statLastSec.getParkIn())
                     .divide(new BigDecimal("1.1"), 2, RoundingMode.HALF_UP)
                     .setScale(0, RoundingMode.CEILING)
                     .intValue();
+            //На больших числах округление нормально работат но на меленьких - нет
+            //Пример 5 / 1.1 = 4.5 ceil = 5
+            if (needThread == statLastSec.getParkIn()) {
+                needThread--;
+            }
             for (int i = 0; i < needThread; i++) {
                 if (!wakeUpOnceThreadLast()) {
                     break;
                 }
             }
+        } else { //Стабильность надо поддерживать
+            wakeUpOnceThreadLast();
         }
     }
 
     @Override
     public void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer) { //Это то, что выполняется в каждом потоке пула балансировки
-        while (isIteration(wrapThread)) {
+        while (isIterationWrapThread(wrapThread)) {
             wrapThread.incCountIteration();
             long startTime = System.currentTimeMillis();
             if (supplierIdleInputTps) {

@@ -7,7 +7,7 @@ import ru.jamsys.scheduler.SchedulerThreadBalancerStabilizer;
 import ru.jamsys.scheduler.SchedulerThreadBalancerStatistic;
 import ru.jamsys.scheduler.SchedulerThreadBalancerTimeLag;
 import ru.jamsys.thread.balancer.ThreadBalancer;
-import ru.jamsys.thread.balancer.ThreadBalancerCore;
+import ru.jamsys.thread.balancer.ThreadBalancerImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +43,8 @@ public class ThreadBalancerFactory {
         return new ArrayList<>(listThreadBalancer.values());
     }
 
-    public ThreadBalancerCore create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
-        ThreadBalancerCore bean = context.getBean(ThreadBalancerCore.class);
+    public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
+        ThreadBalancerImpl bean = context.getBean(ThreadBalancerImpl.class);
         bean.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis, supplierIdleInputTps);
         listThreadBalancer.put(name, bean);
         return bean;
