@@ -2,7 +2,6 @@ package ru.jamsys.thread.balancer;
 
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public interface ThreadBalancer {
 
@@ -24,9 +23,7 @@ public interface ThreadBalancer {
 
     void setTpsMax(int maxTps); //Установить максимальный предел вызываемых блоков iteration (Я так же вам не советую этого делать)
 
-    int setResistance(int prc); //Используется для поддержки сопротивления на избыточную нагрузку (просьба сбавить нагрузку на n процентов)
-
-    AtomicInteger getResistancePercent(); //Получить процент сопротивления
+    void setResistancePrc(int prc); //Используется для поддержки сопротивления на избыточную нагрузку (просьба сбавить нагрузку на n процентов)
 
     void setTestAutoRestoreResistanceTps(boolean status); //По умолчанию восстановление tps будет работать, метод только для тестов
 

@@ -48,6 +48,9 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     private Function<Integer, Integer> formulaRemoveCountThread = (need) -> need;
 
     @Setter
+    private Function<Integer, Integer> formulaRemoveResistancePrc = (need) -> need;
+
+    @Setter
     private volatile boolean correctTimeLag = true;
 
     public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis, boolean supplierIdleInputTps) {
@@ -76,8 +79,17 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (autoRestoreResistanceTps.get() && getResistancePercent().get() > 0) {
-                getResistancePercent().decrementAndGet();
+            if (listResistanceRequest.size() > 0) { //Если были запросы на сопротивление
+                Double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
+                resistancePercent = avg.intValue();
+                listResistanceRequest.clear();
+            } else if (autoRestoreResistanceTps.get() && resistancePercent > 0) {
+                resistancePercent -= formulaRemoveResistancePrc.apply(1);
+            }
+            if (resistancePercent > 0) {
+                tpsResistance.set((100 - resistancePercent) * tpsMax.get() / 100);
+            } else {
+                tpsResistance.set(tpsMax.get());
             }
         } else {
             Util.logConsole(Thread.currentThread(), "threadStabilizer() ThreadBalancer not active");

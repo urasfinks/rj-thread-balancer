@@ -57,6 +57,10 @@ public class ThreadBalancerFactory {
         }
     }
 
+    public ThreadBalancer get(String name){
+        return listThreadBalancer.get(name);
+    }
+
     public void shutdown(String name) {
         ThreadBalancer cs = listThreadBalancer.get(name);
         if (cs != null) {

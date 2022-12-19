@@ -1,6 +1,5 @@
 package ru.jamsys.thread.balancer;
 
-import lombok.Getter;
 import lombok.Setter;
 import org.springframework.lang.Nullable;
 import ru.jamsys.Util;
@@ -41,8 +40,9 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     protected final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
     protected final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение сопротивления (авто коррекция на прежний уровень)
 
-    @Getter
-    private final AtomicInteger resistancePercent = new AtomicInteger(0); //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
+    protected int resistancePercent = 0; //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
+    protected final AtomicInteger tpsResistance = new AtomicInteger(0); //Tps сопротивления
+    protected final ConcurrentLinkedQueue<Integer> listResistanceRequest = new ConcurrentLinkedQueue<>();
 
     @Nullable
     public ThreadBalancerStatisticData getStatisticAggregate() {
@@ -137,6 +137,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         statLastSec.setRun(getActiveThreadStatistic());
         statLastSec.setOneThreadTps(getTpsPerThread());
         statLastSec.setAdd(tpsThreadAdd.getAndSet(0));
+        statLastSec.setResistance(tpsResistance.get());
 
         statLastSec.setTimeTransaction(timeTransactionQueue);
         timeTransactionQueue.clear();
@@ -156,7 +157,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     public boolean isIteration() {
-        return isActive.get() && tpsInput.get() < tpsMax.get() && tpsOutput.get() < tpsMax.get();
+        return isActive.get() && tpsInput.get() < tpsResistance.get() && tpsOutput.get() < tpsResistance.get();
     }
 
     @Override
@@ -165,8 +166,8 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     @Override
-    public int setResistance(int prc) { //Установить процент внешнего сопротивления
-        return 0;
+    public void setResistancePrc(int prc) { //Установить процент внешнего сопротивления
+        listResistanceRequest.add(prc);
     }
 
 }

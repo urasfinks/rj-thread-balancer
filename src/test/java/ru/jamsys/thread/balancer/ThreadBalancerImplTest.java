@@ -31,8 +31,15 @@ class ThreadBalancerImplTest {
     }
 
     @Test
+    void resistanceSupplier() {
+        runSupplier(1, 250, 30000L, 15, 500, 50, clone -> {
+            Assertions.assertTrue(clone.resistance == 295, "Должен выдавать от 4 до 5 tps");
+        });
+    }
+
+    @Test
     void overclockingSupplier() {
-        runSupplier(1, 10, 3000L, 15, 5, clone -> {
+        runSupplier(1, 10, 3000L, 15, 5, 0, clone -> {
             Assertions.assertTrue(clone.getInput() >= 4 && clone.getInput() <= 5, "Должен выдавать от 4 до 5 tps");
             Assertions.assertTrue(clone.getPool() >= 3, "Должен был разогнаться минимум в 3 потока"); // 1 поток может выдавать 2tps нам надо 5 => 3 потока минимум
         });
@@ -40,13 +47,13 @@ class ThreadBalancerImplTest {
 
     @Test
     void overTpsSupplier() {
-        runSupplier(1, 20, 6000L, 15, 5, clone ->
+        runSupplier(1, 20, 6000L, 15, 5, 0, clone ->
                 Assertions.assertTrue(clone.getOutput() >= 5, "Выходящих тпс должно быть больше либо равно 5"));
     }
 
     @Test
     void testThreadParkSupplier() {
-        runSupplier(1, 250, 3000L, 30, 250, clone -> {
+        runSupplier(1, 250, 3000L, 30, 250, 0, clone -> {
             Assertions.assertTrue(clone.getInput() > 240, "getTpsInput Должно быть более 240 тпс");
             Assertions.assertTrue(clone.getInput() < 260, "getTpsInput Должно быть меньше 260 тпс");
             Assertions.assertTrue(clone.getOutput() > 240, "getTpsOutput Должно быть более 240 тпс");
@@ -57,7 +64,7 @@ class ThreadBalancerImplTest {
         });
     }
 
-    void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, int resistancePrc, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
         ThreadBalancerImpl supplierTest = context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive, true);
         supplierTest.setSupplier(() -> {
@@ -65,6 +72,7 @@ class ThreadBalancerImplTest {
             return new MessageImpl();
         });
         supplierTest.setDebug(true);
+        supplierTest.setResistancePrc(resistancePrc);
 
         UtilTest.sleepSec(timeTestSec);
         ThreadBalancerStatisticData clone = supplierTest.getStatisticAggregate();
@@ -77,7 +85,7 @@ class ThreadBalancerImplTest {
 
     @Test
     void overclockingConsumer(){
-        runConsumer(1, 5, 60000L, 1, 10, 12, 500, clone ->
+        runConsumer(1, 5, 60000L, 1, 10, 13, 500, clone ->
                 Assertions.assertEquals(5, clone.getPool(), "Кол-во потоков должно быть 5")
         );
     }
@@ -91,14 +99,14 @@ class ThreadBalancerImplTest {
 
     @Test
     void timeoutConsumer() { //Проверяем время жизни потоков, после теста они должны все статься
-        runConsumer(1, 5, 18000L, 1, 5, 12, 500, clone ->
+        runConsumer(1, 5, 18000L, 1, 5, 13, 500, clone ->
                 Assertions.assertTrue(clone.getPool() == 5, "Кол-во потокв дожно быть равно 5")
         );
     }
 
     @Test
     void summaryCountConsumer() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
-        runConsumer(1, 1000, 16000L, 1, 5000, 20, 1000, clone ->
+        runConsumer(1, 1000, 16000L, 1, 5000, 21, 1000, clone ->
                 Assertions.assertEquals(1000, clone.getPool(), "Кол-во потокв дожно быть 1000")
         );
     }

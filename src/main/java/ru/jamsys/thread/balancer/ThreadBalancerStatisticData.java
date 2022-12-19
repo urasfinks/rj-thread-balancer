@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Data
-@JsonPropertyOrder({"pool", "run", "park", "parkIn", "idle", "wakeUp", "add", "remove", "input", "output", "oneThreadTps", "timeTpsAvg"})
+@JsonPropertyOrder({"pool", "run", "park", "parkIn", "idle", "wakeUp", "add", "remove", "input", "output", "oneThreadTps", "timeTpsAvg", "resistance"})
 public class ThreadBalancerStatisticData implements Cloneable {
 
     @JsonIgnore
@@ -48,6 +48,9 @@ public class ThreadBalancerStatisticData implements Cloneable {
 
     @JsonProperty("oneThreadTps")
     int oneThreadTps; //Кол-во транзакций на поток
+
+    @JsonProperty("tpsResistance")
+    int resistance; //Процент сопротивления
 
     //long sumTimeTpsMax;
     //long sumTimeTpsMin;
