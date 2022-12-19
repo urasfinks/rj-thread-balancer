@@ -103,9 +103,6 @@ class ThreadBalancerImplTest {
         );
     }
 
-
-    //void run(int countThreadMin, int countThreadMax, long keepAlive, int countIteration, int countMessage, int timeTestSec, int tpsInputMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
-    //void runConsumer(int countIteration, int countMessage, int timeTestSec, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, Consumer<ThreadBalancerStatisticData> fnExpected) {
     void runConsumer(int countThreadMin, int countThreadMax, long keepAliveMillis, int countIteration, int countMessage, int timeTestSec, int tpsMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
 
         Util.logConsole(Thread.currentThread(), "Start test");

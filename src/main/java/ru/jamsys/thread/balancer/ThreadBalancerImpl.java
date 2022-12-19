@@ -37,7 +37,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     @Getter
     private String name; //Имя балансировщика - будет отображаться в пуле jmx
 
-    private boolean supplierIdleInputTps = true; //Считать холостую отработку поставщика как успешную входящий TPS
+    private boolean idleInputTps = true; //Считать холостую отработку поставщика как успешную входящий TPS
 
     private final AtomicInteger threadNameCounter = new AtomicInteger(0); //Индекс создаваемого потока, что бы всё красиво было в jmx
 
@@ -51,17 +51,16 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     private volatile boolean correctTimeLag = true;
 
     public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis, boolean supplierIdleInputTps) {
-        this.supplierIdleInputTps = supplierIdleInputTps;
+        this.idleInputTps = supplierIdleInputTps;
         this.setTpsMax(tpsMax);
         if (isActive.compareAndSet(false, true)) {
             this.name = name;
-            this.threadCountMin = threadCountMin;
-            this.threadCountMax = new AtomicInteger(threadCountMax);
+            this.threadCountMin.set(threadCountMin);
+            this.threadCountMax.set(threadCountMax);
             this.threadKeepAlive = threadKeepAliveMillis;
             overclocking(threadCountMin);
         }
     }
-
 
     @Override
     public void threadStabilizer() { //Вызывается планировщиком StabilizerThread каждую секунду
@@ -71,10 +70,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
             try {
                 if (threadParkQueue.size() == 0) {
                     overclocking(formulaAddCountThread.apply(threadList.size()));
-//                    if (debug) {
-//                        Util.logConsole(Thread.currentThread(), "AddThread: " + addThreadCount);
-//                    }
-                } else if (threadList.size() > threadCountMin) { //Кол-во потоков больше минимума
+                } else if (threadList.size() > threadCountMin.get()) { //Кол-во потоков больше минимума
                     checkKeepAliveAndRemoveThread();
                 }
             } catch (Exception e) {
@@ -172,21 +168,17 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         return false;
     }
 
-    private int overclocking(int count) {
+    private void overclocking(int count) {
         if (!isActive.get() || threadList.size() >= threadCountMax.get()) {
-            return 0;
+            return;
         }
-        int countRealAdd = 0;
         if (count > 0) {
             for (int i = 0; i < count; i++) {
-                if (addThread()) {
-                    countRealAdd++;
-                } else {
+                if (!addThread()) {
                     break;
                 }
             }
         }
-        return countRealAdd;
     }
 
     private boolean addThread() {
@@ -201,7 +193,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                         iteration(wrapThread, self);
                         //В методе wakeUpOnceThread решена проблема гонки за предварительный старт
                         threadParkQueue.add(wrapThread);
-                        tpsPark.incrementAndGet();
+                        tpsThreadParkIn.incrementAndGet();
                         LockSupport.park();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -210,7 +202,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                 removeThread(wrapThread, true);
             }));
             wrapThread.getThread().setName(getName() + "-" + threadNameCounter.getAndIncrement());
-            poolAdd.incrementAndGet();
+            tpsThreadAdd.incrementAndGet();
             threadList.add(wrapThread);
             wrapThread.getThread().start();
             return true;
@@ -220,14 +212,14 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
 
     private void safeRemoveThread(@NonNull WrapThread wrapThread) {
         //Кол-во неприкасаемых потоков, которые должно быть
-        if (threadList.size() > threadCountMin) {
+        if (threadList.size() > threadCountMin.get()) {
             removeThread(wrapThread, false);
         }
     }
 
-    synchronized private void removeThread(@NonNull WrapThread wrapThread, boolean innerThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
+    synchronized private void removeThread(@NonNull WrapThread wrapThread, boolean fromThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
         wrapThread.getIsRun().set(false);
-        if (!innerThread) { //Если этот метод вызывается из самого потока, не надо его дополнительно выводить из парковки
+        if (!fromThread) { //Если этот метод вызывается из самого потока, не надо его дополнительно выводить из парковки
             try {
                 LockSupport.unpark(wrapThread.getThread()); //Мы его оживляем, что бы он закончился
             } catch (Exception e) {
@@ -236,8 +228,8 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         }
         threadList.remove(wrapThread);
         threadParkQueue.remove(wrapThread); // На всякий случай
-        if (!poolRemove.contains(wrapThread)) {
-            poolRemove.add(wrapThread);
+        if (!tpsThreadRemove.contains(wrapThread)) {
+            tpsThreadRemove.add(wrapThread);
         }
     }
 
@@ -289,12 +281,12 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         while (isIterationWrapThread(wrapThread)) {
             wrapThread.incCountIteration();
             long startTime = System.currentTimeMillis();
-            if (supplierIdleInputTps) {
-                tpsInput.incrementAndGet(); //Короче оно должно быть тут для supplier точно
+            if (idleInputTps) {
+                tpsInput.incrementAndGet();
             }
             Message message = supplier.get();
             if (message != null) {
-                if (supplierIdleInputTps) {
+                if (idleInputTps) {
                     message.onHandle(MessageHandle.CREATE, this);
                 } else {
                     tpsInput.incrementAndGet();
