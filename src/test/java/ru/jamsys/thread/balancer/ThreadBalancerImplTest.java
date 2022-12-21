@@ -33,7 +33,7 @@ class ThreadBalancerImplTest {
     @Test
     void resistanceSupplier() {
         runSupplier(1, 250, 30000L, 15, 500, 50, clone -> {
-            Assertions.assertTrue(clone.resistance == 295, "Должен выдавать от 4 до 5 tps");
+            Assertions.assertTrue(clone.resistance > 290 && clone.resistance < 300, "Должен выдавать 295 tps");
         });
     }
 
@@ -85,28 +85,28 @@ class ThreadBalancerImplTest {
 
     @Test
     void overclockingConsumer(){
-        runConsumer(1, 5, 60000L, 1, 10, 13, 500, clone ->
+        runConsumer(1, 5, 60000L, 1, 10, 15, 500, clone ->
                 Assertions.assertEquals(5, clone.getPool(), "Кол-во потоков должно быть 5")
         );
     }
 
     @Test
     void dampingConsumer() { //Проверяем удаление потоков после ненадобности
-        runConsumer(5, 10, 2000L, 2, 15, 25, 500, clone ->
+        runConsumer(5, 10, 2000L, 1, 15, 25, 500, clone ->
                 Assertions.assertEquals(5, clone.getPool(), "Должен остаться только 5 потоков")
         );
     }
 
     @Test
     void timeoutConsumer() { //Проверяем время жизни потоков, после теста они должны все статься
-        runConsumer(1, 5, 18000L, 1, 5, 13, 500, clone ->
+        runConsumer(1, 5, 18000L, 1, 5, 15, 500, clone ->
                 Assertions.assertTrue(clone.getPool() == 5, "Кол-во потокв дожно быть равно 5")
         );
     }
 
     @Test
     void summaryCountConsumer() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
-        runConsumer(1, 1000, 16000L, 1, 5000, 21, 1000, clone ->
+        runConsumer(1, 1000, 16000L, 1, 5000, 25, 1000, clone ->
                 Assertions.assertEquals(1000, clone.getPool(), "Кол-во потокв дожно быть 1000")
         );
     }

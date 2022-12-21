@@ -1,6 +1,7 @@
 package ru.jamsys.scheduler;
 
 import ru.jamsys.Util;
+import ru.jamsys.component.SchedulerGlobal;
 import ru.jamsys.component.StatisticAggregator;
 import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.thread.balancer.ThreadBalancer;
@@ -13,17 +14,32 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class SchedulerThreadBalancerStatistic extends AbstractSchedulerThreadBalancer {
+public class SchedulerThreadBalancerStatistic {
 
     final private StatisticAggregator statisticAggregator;
+    final private ThreadBalancerFactory threadBalancerFactory;
+    final private SchedulerGlobal schedulerGlobal;
 
-    public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator) {
-        super("SchedulerThreadBalancerStatistic", 1000, threadBalancerFactory);
+    public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator, SchedulerGlobal schedulerGlobal) {
         this.statisticAggregator = statisticAggregator;
-        run();
+        this.threadBalancerFactory = threadBalancerFactory;
+        this.schedulerGlobal = schedulerGlobal;
+        schedulerGlobal.add(this::run);
     }
 
-    @Override
+    private void run() {
+        if (threadBalancerFactory != null) {
+            try {
+                List<Object> objects = Util.forEach(ThreadBalancer.toArrayThreadBalancer(threadBalancerFactory.getListThreadBalancer()), getHandler());
+                getResultHandlerList().accept(objects);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        //Util.logConsole(Thread.currentThread(), "flushStatistic: " + Util.jsonObjectToString(statisticAggregator.flush()));
+    }
+
+
     protected Function<ThreadBalancer, Object> getHandler() {
         return t -> {
             ThreadBalancerStatisticData r = t.flushStatistic();
@@ -32,7 +48,6 @@ public class SchedulerThreadBalancerStatistic extends AbstractSchedulerThreadBal
     }
 
     @SuppressWarnings("unchecked")
-    @Override
     protected Consumer<Object> getResultHandlerList() {
         return result -> {
             Map<String, ThreadBalancerStatisticData> map = new HashMap<>();
@@ -43,17 +58,9 @@ public class SchedulerThreadBalancerStatistic extends AbstractSchedulerThreadBal
         };
     }
 
-    @Override
-    public <T> Consumer<T> getConsumer() {
-        if (debug) {
-            Util.logConsole(Thread.currentThread(), "flushStatistic: " + Util.jsonObjectToString(statisticAggregator.flush()));
-        }
-        return super.getConsumer();
-    }
-
     @PreDestroy
     public void destroy() {
-        super.shutdown();
+        schedulerGlobal.remove(this::run);
     }
 
 }
