@@ -1,7 +1,7 @@
 package ru.jamsys.scheduler;
 
 import ru.jamsys.Util;
-import ru.jamsys.component.SchedulerGlobal;
+import ru.jamsys.component.SchedulerGlobalStatistic;
 import ru.jamsys.component.StatisticAggregator;
 import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.thread.balancer.ThreadBalancer;
@@ -18,13 +18,13 @@ public class SchedulerThreadBalancerStatistic {
 
     final private StatisticAggregator statisticAggregator;
     final private ThreadBalancerFactory threadBalancerFactory;
-    final private SchedulerGlobal schedulerGlobal;
+    final private SchedulerGlobalStatistic schedulerGlobalStatistic;
 
-    public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator, SchedulerGlobal schedulerGlobal) {
+    public SchedulerThreadBalancerStatistic(ThreadBalancerFactory threadBalancerFactory, StatisticAggregator statisticAggregator, SchedulerGlobalStatistic schedulerGlobalStatistic) {
         this.statisticAggregator = statisticAggregator;
         this.threadBalancerFactory = threadBalancerFactory;
-        this.schedulerGlobal = schedulerGlobal;
-        schedulerGlobal.add(this::run);
+        this.schedulerGlobalStatistic = schedulerGlobalStatistic;
+        schedulerGlobalStatistic.add(this::run);
     }
 
     private void run() {
@@ -60,7 +60,7 @@ public class SchedulerThreadBalancerStatistic {
 
     @PreDestroy
     public void destroy() {
-        schedulerGlobal.remove(this::run);
+        schedulerGlobalStatistic.remove(this::run);
     }
 
 }

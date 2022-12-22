@@ -21,7 +21,7 @@ public class ThreadBalancerFactory {
 
     private final ApplicationContext context;
 
-    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator, SchedulerGlobal schedulerGlobal) {
+    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator, SchedulerGlobalStatistic schedulerGlobalStatistic) {
         this.context = context;
         try {
             SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
@@ -30,7 +30,7 @@ public class ThreadBalancerFactory {
             SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = new SchedulerThreadBalancerStabilizer(this);
             schedulerThreadBalancerStabilizer.setDebug(App.debug);
 
-            SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = new SchedulerThreadBalancerStatistic(this, statisticAggregator, schedulerGlobal);
+            SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = new SchedulerThreadBalancerStatistic(this, statisticAggregator, schedulerGlobalStatistic);
             //schedulerThreadBalancerStatistic.setDebug(App.debug);
         } catch (Exception e) {
             e.printStackTrace();
