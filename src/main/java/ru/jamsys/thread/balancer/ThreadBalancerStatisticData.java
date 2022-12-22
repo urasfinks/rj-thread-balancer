@@ -58,10 +58,16 @@ public class ThreadBalancerStatisticData implements Cloneable {
     int timeTpsAvg;
 
     public void setTimeTransaction(ConcurrentLinkedDeque<Long> queue) {
-        LongSummaryStatistics avgTimeTps = queue.stream().mapToLong(Long::longValue).summaryStatistics();
+        int resAvg = 0;
+        try { //Ловим модификатор, пока ни разу не ловил, на всякий случай
+            LongSummaryStatistics avgTimeTps = queue.stream().mapToLong(Long::longValue).summaryStatistics();
+            resAvg = (int) avgTimeTps.getAverage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         //sumTimeTpsMax = avgTimeTps.getMax();
         //sumTimeTpsMin = avgTimeTps.getMin();
-        timeTpsAvg = (int) avgTimeTps.getAverage();
+        timeTpsAvg = resAvg;
     }
 
     @Nullable

@@ -80,8 +80,14 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                 e.printStackTrace();
             }
             if (listResistanceRequest.size() > 0) { //Если были запросы на сопротивление
-                Double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
-                resistancePercent = avg.intValue();
+                int resAvg = 0;
+                try { //Ловим модификатор, пока ни разу не ловил, на всякий случай
+                    Double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
+                    resAvg = avg.intValue();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                resistancePercent = resAvg;
                 listResistanceRequest.clear();
             } else if (autoRestoreResistanceTps.get() && resistancePercent > 0) {
                 resistancePercent -= formulaRemoveResistancePrc.apply(1);
