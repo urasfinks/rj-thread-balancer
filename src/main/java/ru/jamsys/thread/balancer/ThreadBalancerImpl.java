@@ -71,7 +71,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         //Util.logConsole(Thread.currentThread(), "threadStabilizer()");
         if (isActive.get()) {
             try {
-                if (threadParkQueue.size() == 0) {
+                if (threadParkQueue.isEmpty()) {
                     overclocking(formulaAddCountThread.apply(threadList.size()));
                 } else if (threadList.size() > threadCountMin.get()) { //Кол-во потоков больше минимума
                     checkKeepAliveAndRemoveThread();
@@ -79,7 +79,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (listResistanceRequest.size() > 0) { //Если были запросы на сопротивление
+            if (!listResistanceRequest.isEmpty()) { //Если были запросы на сопротивление
                 int resAvg = 0;
                 try { //Ловим модификатор, пока ни разу не ловил, на всякий случай
                     double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
@@ -122,7 +122,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         Util.logConsole(Thread.currentThread(), "TO SHUTDOWN");
         if (isActive.compareAndSet(true, false)) { //Только один поток будет останавливать
             long startShutdown = System.currentTimeMillis();
-            while (threadList.size() > 0) {
+            while (!threadList.isEmpty()) {
                 try {
                     WrapThread wrapThread = threadParkQueue.getFirst(); //Замысел такой, что бы выцеплять только заверенные процессы
                     removeThread(wrapThread, false);
@@ -156,7 +156,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         } else {
             Util.logConsole(Thread.currentThread(), "Already shutdown in other Thread");
         }
-        if (threadList.size() > 0) {
+        if (!threadList.isEmpty()) {
             throw new ShutdownException("ThreadPoolSize: " + threadList.size());
         }
     }
