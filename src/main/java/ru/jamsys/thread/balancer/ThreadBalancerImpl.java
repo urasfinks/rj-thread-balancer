@@ -82,8 +82,8 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
             if (listResistanceRequest.size() > 0) { //Если были запросы на сопротивление
                 int resAvg = 0;
                 try { //Ловим модификатор, пока ни разу не ловил, на всякий случай
-                    Double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
-                    resAvg = avg.intValue();
+                    double avg = listResistanceRequest.stream().mapToLong(Integer::intValue).summaryStatistics().getAverage();
+                    resAvg = (int) avg;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

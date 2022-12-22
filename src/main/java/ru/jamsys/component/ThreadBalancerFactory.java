@@ -1,46 +1,52 @@
 package ru.jamsys.component;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import ru.jamsys.App;
-import ru.jamsys.scheduler.SchedulerThreadBalancerStabilizer;
-import ru.jamsys.scheduler.SchedulerThreadBalancerStatistic;
-import ru.jamsys.scheduler.SchedulerThreadBalancerTimeLag;
+import ru.jamsys.AbstractCoreComponent;
+import ru.jamsys.scheduler.SchedulerGlobal;
 import ru.jamsys.thread.balancer.ThreadBalancer;
+import ru.jamsys.thread.balancer.ThreadBalancerAggregateStatisticData;
 import ru.jamsys.thread.balancer.ThreadBalancerImpl;
+import ru.jamsys.thread.balancer.ThreadBalancerStatisticData;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class ThreadBalancerFactory {
+@Lazy
+public class ThreadBalancerFactory extends AbstractCoreComponent {
 
     private final ApplicationContext context;
+    private final Scheduler scheduler;
+    private final StatisticAggregator statisticAggregator;
+    private final String nameSchedulerStabilizer = "SchedulerThreadBalancerStabilizer";
+    private final String nameSchedulerTimeLag = "SchedulerThreadBalancerTimeLag";
+    private final Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();
 
-    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator, SchedulerGlobalStatistic schedulerGlobalStatistic) {
+    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator, Scheduler scheduler) {
+
         this.context = context;
-        try {
-            SchedulerThreadBalancerTimeLag schedulerThreadBalancerTimeLag = new SchedulerThreadBalancerTimeLag(this);
-            schedulerThreadBalancerTimeLag.setDebug(App.debug);
+        this.scheduler = scheduler;
+        this.statisticAggregator = statisticAggregator;
 
-            SchedulerThreadBalancerStabilizer schedulerThreadBalancerStabilizer = new SchedulerThreadBalancerStabilizer(this);
-            schedulerThreadBalancerStabilizer.setDebug(App.debug);
+        scheduler.add(SchedulerGlobal.SCHEDULER_GLOBAL_STATISTIC_WRITE, this::flushStatistic);
+        scheduler.add(nameSchedulerStabilizer, this::threadStabilizer, 1000);
+        scheduler.add(nameSchedulerTimeLag, this::timeLag, 333);
 
-            SchedulerThreadBalancerStatistic schedulerThreadBalancerStatistic = new SchedulerThreadBalancerStatistic(this, statisticAggregator, schedulerGlobalStatistic);
-            //schedulerThreadBalancerStatistic.setDebug(App.debug);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
-    Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();
-
+    @SuppressWarnings("unused")
     public List<ThreadBalancer> getListThreadBalancer() {
         return new ArrayList<>(listThreadBalancer.values());
+    }
+
+    @SuppressWarnings("unused")
+    public ThreadBalancer getThreadBalancer(String name) {
+        return listThreadBalancer.get(name);
     }
 
     public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
@@ -50,15 +56,54 @@ public class ThreadBalancerFactory {
         return bean;
     }
 
+    @Override
     public void shutdown() {
-        Set<String> strings = listThreadBalancer.keySet();
+        super.shutdown();
+
+        scheduler.remove(SchedulerGlobal.SCHEDULER_GLOBAL_STATISTIC_WRITE, this::flushStatistic);
+        scheduler.remove(nameSchedulerStabilizer, this::threadStabilizer);
+        scheduler.remove(nameSchedulerTimeLag, this::timeLag);
+
+        String[] strings = listThreadBalancer.keySet().toArray(new String[0]);
         for (String name : strings) {
             shutdown(name);
         }
     }
 
-    public ThreadBalancer get(String name){
-        return listThreadBalancer.get(name);
+    private void threadStabilizer() {
+        String[] strings = listThreadBalancer.keySet().toArray(new String[0]);
+        for (String name : strings) {
+            ThreadBalancer threadBalancer = listThreadBalancer.get(name);
+            if (threadBalancer != null) {
+                threadBalancer.threadStabilizer();
+            }
+        }
+    }
+
+    private void timeLag() {
+        String[] strings = listThreadBalancer.keySet().toArray(new String[0]);
+        for (String name : strings) {
+            ThreadBalancer threadBalancer = listThreadBalancer.get(name);
+            if (threadBalancer != null) {
+                threadBalancer.timeLag();
+            }
+        }
+    }
+
+    @Override
+    public void flushStatistic() {
+        String[] strings = listThreadBalancer.keySet().toArray(new String[0]);
+        ThreadBalancerAggregateStatisticData aggStat = new ThreadBalancerAggregateStatisticData();
+        for (String name : strings) {
+            ThreadBalancer threadBalancer = listThreadBalancer.get(name);
+            if (threadBalancer != null) {
+                ThreadBalancerStatisticData thStat = threadBalancer.flushStatistic();
+                if (thStat != null) {
+                    aggStat.getMap().put(name, thStat.clone());
+                }
+            }
+        }
+        statisticAggregator.add(aggStat);
     }
 
     public void shutdown(String name) {

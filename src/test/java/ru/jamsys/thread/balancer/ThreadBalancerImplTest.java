@@ -106,7 +106,7 @@ class ThreadBalancerImplTest {
 
     @Test
     void summaryCountConsumer() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
-        runConsumer(1, 1000, 16000L, 1, 5000, 25, 1000, clone ->
+        runConsumer(1, 1000, 60000L, 1, 5000, 25, 1000, clone ->
                 Assertions.assertEquals(1000, clone.getPool(), "Кол-во потокв дожно быть 1000")
         );
     }

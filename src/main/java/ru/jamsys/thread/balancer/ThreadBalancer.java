@@ -1,8 +1,5 @@
 package ru.jamsys.thread.balancer;
 
-
-import java.util.List;
-
 public interface ThreadBalancer {
 
     ThreadBalancerStatisticData flushStatistic(); //Дожно использоваться только Планировщиком статистики, который каждую секунду сбрасывает и агрегирует информацию
@@ -25,11 +22,7 @@ public interface ThreadBalancer {
 
     void setResistancePrc(int prc); //Используется для поддержки сопротивления на избыточную нагрузку (просьба сбавить нагрузку на n процентов)
 
+    @SuppressWarnings("unused")
     void setTestAutoRestoreResistanceTps(boolean status); //По умолчанию восстановление tps будет работать, метод только для тестов
-
-    @SuppressWarnings("all")
-    public static ThreadBalancer[] toArrayThreadBalancer(List<ThreadBalancer> l) throws Exception { // Маленька защита от конкуретных итераторов с измененеием (НЕ ПАНАЦЕЯ)
-        return l.toArray(new ThreadBalancer[0]);
-    }
 
 }

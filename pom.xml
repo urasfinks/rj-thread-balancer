@@ -69,6 +69,13 @@
       <artifactId>rj-statistic</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
+
+    <dependency>
+      <groupId>ru.jamsys</groupId>
+      <artifactId>rj-core</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+
   </dependencies>
 
   <build>
