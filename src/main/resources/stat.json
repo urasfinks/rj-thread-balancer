@@ -1,0 +1,47 @@
+{
+  "name": "StatisticAggregatorData",
+  "timestamp": 1671792302878,
+  "list": [
+    {
+      "name": "SchedulerStatistic",
+      "set": [
+        "SchedulerThreadBalancerStabilizer",
+        "SchedulerGlobalStatisticRead",
+        "SchedulerGlobalStatisticWrite",
+        "SchedulerThreadBalancerTimeLag"
+      ]
+    },
+    {
+      "name": "BrokerStatistic",
+      "list": [
+        {
+          "name": "BrokerQueue",
+          "tpsInput": 1,
+          "tpsOutput": 1,
+          "size": 0,
+          "timeAvg": 64
+        }
+      ]
+    },
+    {
+      "name": "ThreadBalancerAggregateStatisticData",
+      "map": {
+        "SupplierTest": {
+          "pool": 1,
+          "run": 1,
+          "park": 0,
+          "parkIn": 0,
+          "idle": 1,
+          "wakeUp": 1,
+          "add": 0,
+          "remove": 0,
+          "input": 1,
+          "output": 0,
+          "oneThreadTps": -1,
+          "timeTpsAvg": 0,
+          "tpsResistance": 250
+        }
+      }
+    }
+  ]
+}

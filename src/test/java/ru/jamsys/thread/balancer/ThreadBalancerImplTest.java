@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
-import org.springframework.context.ConfigurableApplicationContext;
 import ru.jamsys.App;
 import ru.jamsys.Util;
 import ru.jamsys.UtilTest;
+import ru.jamsys.component.StatisticReaderDefault;
 import ru.jamsys.component.ThreadBalancerFactory;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageImpl;
@@ -21,20 +21,16 @@ import java.util.function.Consumer;
 
 class ThreadBalancerImplTest {
 
-    static ConfigurableApplicationContext context;
-
     @BeforeAll
     static void beforeAll() {
         String[] args = new String[]{};
-        context = SpringApplication.run(App.class, args);
-        App.initContext(context, true);
+        App.context = SpringApplication.run(App.class, args);
+        App.context.getBean(StatisticReaderDefault.class);
     }
 
     @Test
     void resistanceSupplier() {
-        runSupplier(1, 250, 30000L, 15, 500, 50, clone -> {
-            Assertions.assertTrue(clone.resistance > 290 && clone.resistance < 300, "Должен выдавать 295 tps");
-        });
+        runSupplier(0, 250, 30000L, 15, 500, 50, clone -> Assertions.assertTrue(clone.resistance > 290 && clone.resistance < 300, "Должен выдавать 295 tps"));
     }
 
     @Test
@@ -64,9 +60,10 @@ class ThreadBalancerImplTest {
         });
     }
 
+    @SuppressWarnings("")
     void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, int resistancePrc, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
-        ThreadBalancerImpl supplierTest = context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive, true);
+        ThreadBalancerImpl supplierTest = App.context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive, true);
         supplierTest.setSupplier(() -> {
             Util.sleepMillis(500);
             return new MessageImpl();
@@ -80,7 +77,7 @@ class ThreadBalancerImplTest {
         if (clone != null) {
             fnExpected.accept(clone);
         }
-        context.getBean(ThreadBalancerFactory.class).shutdown();
+        App.context.getBean(ThreadBalancerFactory.class).shutdown();
     }
 
     @Test
@@ -100,13 +97,13 @@ class ThreadBalancerImplTest {
     @Test
     void timeoutConsumer() { //Проверяем время жизни потоков, после теста они должны все статься
         runConsumer(1, 5, 18000L, 1, 5, 15, 500, clone ->
-                Assertions.assertTrue(clone.getPool() == 5, "Кол-во потокв дожно быть равно 5")
+                Assertions.assertEquals(clone.getPool(), 5, "Кол-во потокв дожно быть равно 5")
         );
     }
 
     @Test
     void summaryCountConsumer() { //Проверяем, что сообщения все обработаны при большом кол-ве потоков
-        runConsumer(1, 1000, 60000L, 1, 5000, 25, 1000, clone ->
+        runConsumer(1, 1000, 60000L, 2, 5000, 25, 1000, clone ->
                 Assertions.assertEquals(1000, clone.getPool(), "Кол-во потокв дожно быть 1000")
         );
     }
@@ -114,10 +111,10 @@ class ThreadBalancerImplTest {
     void runConsumer(int countThreadMin, int countThreadMax, long keepAliveMillis, int countIteration, int countMessage, int timeTestSec, int tpsMax, Consumer<ThreadBalancerStatisticData> fnExpected) {
 
         Util.logConsole(Thread.currentThread(), "Start test");
-        ConcurrentLinkedDeque<Message> queue = new ConcurrentLinkedDeque();
+        ConcurrentLinkedDeque<Message> queue = new ConcurrentLinkedDeque<>();
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);
 
-        ThreadBalancerImpl consumerTest = context.getBean(ThreadBalancerFactory.class).create("ConsumerTest", countThreadMin, countThreadMax, tpsMax, keepAliveMillis, false);
+        ThreadBalancerImpl consumerTest = App.context.getBean(ThreadBalancerFactory.class).create("ConsumerTest", countThreadMin, countThreadMax, tpsMax, keepAliveMillis, false);
         consumerTest.setCorrectTimeLag(false);
         consumerTest.setSupplier(() -> {
             Util.sleepMillis(1000);
@@ -172,7 +169,7 @@ class ThreadBalancerImplTest {
         }
 
         t1.interrupt();
-        context.getBean(ThreadBalancerFactory.class).shutdown();
+        App.context.getBean(ThreadBalancerFactory.class).shutdown();
     }
 
 }

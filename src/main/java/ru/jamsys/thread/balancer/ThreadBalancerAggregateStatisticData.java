@@ -7,5 +7,8 @@ import java.util.Map;
 
 @Data
 public class ThreadBalancerAggregateStatisticData {
+
+    String name = getClass().getSimpleName();
+
     Map<String, ThreadBalancerStatisticData> map = new HashMap<>();
 }
