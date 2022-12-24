@@ -1,6 +1,5 @@
 package ru.jamsys.component;
 
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ru.jamsys.AbstractCoreComponent;
@@ -20,16 +19,14 @@ import java.util.concurrent.TimeUnit;
 @Lazy
 public class ThreadBalancerFactory extends AbstractCoreComponent {
 
-    private final ApplicationContext context;
     private final Scheduler scheduler;
     private final StatisticAggregator statisticAggregator;
     private final String nameSchedulerStabilizer = "SchedulerThreadBalancerStabilizer";
     private final String nameSchedulerTimeLag = "SchedulerThreadBalancerTimeLag";
     private final Map<String, ThreadBalancer> listThreadBalancer = new ConcurrentHashMap<>();
 
-    public ThreadBalancerFactory(ApplicationContext context, StatisticAggregator statisticAggregator, Scheduler scheduler) {
+    public ThreadBalancerFactory(StatisticAggregator statisticAggregator, Scheduler scheduler) {
 
-        this.context = context;
         this.scheduler = scheduler;
         this.statisticAggregator = statisticAggregator;
 
@@ -50,10 +47,10 @@ public class ThreadBalancerFactory extends AbstractCoreComponent {
     }
 
     public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
-        ThreadBalancerImpl bean = context.getBean(ThreadBalancerImpl.class);
-        bean.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis, supplierIdleInputTps);
-        listThreadBalancer.put(name, bean);
-        return bean;
+        ThreadBalancerImpl threadBalancer = new ThreadBalancerImpl();
+        threadBalancer.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis, supplierIdleInputTps);
+        listThreadBalancer.put(name, threadBalancer);
+        return threadBalancer;
     }
 
     @Override

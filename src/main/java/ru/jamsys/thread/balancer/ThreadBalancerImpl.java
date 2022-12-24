@@ -3,8 +3,6 @@ package ru.jamsys.thread.balancer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 import ru.jamsys.Util;
 import ru.jamsys.message.Message;
 import ru.jamsys.message.MessageHandle;
@@ -21,8 +19,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-@Component
-@Scope("prototype")
 public class ThreadBalancerImpl extends ThreadBalancerStatistic implements ThreadBalancer {
 
     @Setter
