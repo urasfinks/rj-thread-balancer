@@ -3,6 +3,7 @@ package ru.jamsys.thread.balancer;
 import lombok.Setter;
 import org.springframework.lang.Nullable;
 import ru.jamsys.Util;
+import ru.jamsys.UtilJson;
 import ru.jamsys.WrapJsonToObject;
 
 import java.math.BigDecimal;
@@ -74,7 +75,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         Map<String, Object> aggResult = new HashMap<>();
         int maxKey = 0;
         for (ThreadBalancerStatisticData threadBalancerStatisticData : list) {
-            WrapJsonToObject<Map> mapWrapJsonToObject = Util.jsonToObject(Util.jsonObjectToString(threadBalancerStatisticData), Map.class);
+            WrapJsonToObject<Map> mapWrapJsonToObject = UtilJson.toObject(UtilJson.toString(threadBalancerStatisticData, "{}"), Map.class);
             Map<String, Object> x = (Map<String, Object>) mapWrapJsonToObject.getObject();
             int maxValue = 0;
 
@@ -97,7 +98,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
             Object[] objects = agg.keySet().toArray();
             System.out.println("\n-------------------------------------------------------------------------------------------------------------------------------");
             for (Object o : objects) {
-                System.out.println(Util.padLeft(o.toString(), maxKey) + ": " + Objects.requireNonNull(Util.jsonObjectToStringPretty(agg.get(o))).replaceAll("\"", ""));
+                System.out.println(Util.padLeft(o.toString(), maxKey) + ": " + Objects.requireNonNull(UtilJson.toStringPretty(agg.get(o), "{}")).replaceAll("\"", ""));
             }
             System.out.println("-------------------------------------------------------------------------------------------------------------------------------\n");
         }
@@ -109,7 +110,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
                     .orElse(0.0);
             aggResult.put(key, (int) t);
         }
-        WrapJsonToObject<ThreadBalancerStatisticData> p = Util.jsonToObject(Util.jsonObjectToString(aggResult), ThreadBalancerStatisticData.class);
+        WrapJsonToObject<ThreadBalancerStatisticData> p = UtilJson.toObject(UtilJson.toString(aggResult, "{}"), ThreadBalancerStatisticData.class);
         return p.getObject();
     }
 

@@ -40,34 +40,10 @@
     </dependency>
 
     <dependency>
-      <groupId>ru.jamsys</groupId>
-      <artifactId>rj-scheduler</artifactId>
-      <version>1.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
-      <groupId>ru.jamsys</groupId>
-      <artifactId>rj-message</artifactId>
-      <version>1.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>RELEASE</version>
       <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>ru.jamsys</groupId>
-      <artifactId>rj-util</artifactId>
-      <version>1.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
-      <groupId>ru.jamsys</groupId>
-      <artifactId>rj-statistic</artifactId>
-      <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
