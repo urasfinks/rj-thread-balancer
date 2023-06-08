@@ -10,14 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WrapThread {
 
     private Thread thread;
-    private AtomicBoolean isAlive = new AtomicBoolean(true);
+    private AtomicBoolean isRun = new AtomicBoolean(true);
     private long lastWakeUp = System.currentTimeMillis();
     private AtomicInteger countIteration = new AtomicInteger(0);
 
-    private volatile boolean isActive = false;
+    private volatile boolean isAlive = false;
 
     public void incCountIteration() {
-        isActive = true;
+        isAlive = true;
         countIteration.incrementAndGet();
     }
 
@@ -26,7 +26,7 @@ public class WrapThread {
         return l.toArray(new WrapThread[0]);
     }
 
-    public boolean getActive() {
-        return isActive;
+    public boolean getAlive() {
+        return isAlive;
     }
 }

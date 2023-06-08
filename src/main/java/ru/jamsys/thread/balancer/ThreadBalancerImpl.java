@@ -200,7 +200,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
             final ThreadBalancer self = this;
             final WrapThread wrapThread = new WrapThread();
             wrapThread.setThread(new Thread(() -> {
-                while (!wrapThread.getThread().isInterrupted() && isActive.get() && wrapThread.getIsAlive().get()) {
+                while (!wrapThread.getThread().isInterrupted() && isActive.get() && wrapThread.getIsRun().get()) {
                     try {
                         wrapThread.incCountIteration(); // Это для отслеживания, что поток вообще работает
                         tpsIdle.incrementAndGet();
@@ -232,7 +232,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     }
 
     synchronized private void removeThread(@NonNull WrapThread wrapThread, boolean fromThread) { //Этот метод может загасит пул балансировщика до конца, используйте обычный removeThread
-        wrapThread.getIsAlive().set(false);
+        wrapThread.getIsRun().set(false);
         if (!fromThread) { //Если этот метод вызывается из самого потока, не надо его дополнительно выводить из парковки
             try {
                 LockSupport.unpark(wrapThread.getThread()); //Мы его оживляем, что бы он закончился

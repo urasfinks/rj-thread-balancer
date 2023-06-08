@@ -117,10 +117,10 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     private int getActiveThreadStatistic() {
         int counter = 0;
         for (WrapThread wrapThread : threadList) {
-            if (wrapThread.getActive()) {
+            if (wrapThread.getAlive()) {
                 counter++;
             }
-            wrapThread.setActive(false);
+            wrapThread.setAlive(false);
         }
         return counter;
     }
@@ -154,7 +154,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     public boolean isIterationWrapThread(WrapThread wrapThread) {
-        return wrapThread.getIsAlive().get() && isIteration();
+        return wrapThread.getIsRun().get() && isIteration();
     }
 
     public boolean isIteration() {
