@@ -117,10 +117,10 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     private int getActiveThreadStatistic() {
         int counter = 0;
         for (WrapThread wrapThread : threadList) {
-            if (wrapThread.getFine()) {
+            if (wrapThread.getActive()) {
                 counter++;
             }
-            wrapThread.setFine(false);
+            wrapThread.setActive(false);
         }
         return counter;
     }
