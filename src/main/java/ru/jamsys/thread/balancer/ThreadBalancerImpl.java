@@ -157,6 +157,13 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         }
     }
 
+    @Override
+    public void wakeUpIfEveryoneIsSleeping() { //Пробудить одного если все спят
+        if (isActive.get() && threadParkQueue.size() == threadList.size()) {
+            wakeUpOnceThreadLast();
+        }
+    }
+
     public boolean wakeUpOnceThreadLast() {
         while (isActive.get()) { //Хотел тут добавить проверку, что бы последний на паркинге не забирать, но так низя - иначе ThreadBalancer увеличит потоки, когда в паркинге никого не будет => надо правильно рассчитывать то кол-во, которое реально надо разбудить
             WrapThread wrapThread = threadParkQueue.pollLast(); //Всегда забираем с конца, в начале тушаться потоки под нож
