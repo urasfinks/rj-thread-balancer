@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WrapThread {
 
     private Thread thread;
-    private AtomicBoolean isRun = new AtomicBoolean(true);
+    private AtomicBoolean isAlive = new AtomicBoolean(true);
     private long lastWakeUp = System.currentTimeMillis();
     private AtomicInteger countIteration = new AtomicInteger(0);
 

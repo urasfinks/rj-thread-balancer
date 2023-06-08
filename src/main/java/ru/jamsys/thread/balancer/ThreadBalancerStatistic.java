@@ -154,7 +154,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     public boolean isIterationWrapThread(WrapThread wrapThread) {
-        return wrapThread.getIsRun().get() && isIteration();
+        return wrapThread.getIsAlive().get() && isIteration();
     }
 
     public boolean isIteration() {
