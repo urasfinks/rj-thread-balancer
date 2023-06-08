@@ -275,9 +275,10 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                     .divide(new BigDecimal("1.1"), 2, RoundingMode.HALF_UP)
                     .setScale(0, RoundingMode.CEILING)
                     .intValue();
-            //На больших числах округление нормально работат но на меленьких - нет
-            //Пример 5 / 1.1 = 4.5 ceil = 5
-            if (needThread == statLastSec.getParkIn()) {
+            //На больших числах округление нормально работает, но на меленьких - нет
+            //Пример 5 / 1.1 = 4.5 ceil = 5, но вроде как надо сокращать кол-во, так как в паркинг они пошли от безделия
+            //Но если в паркинг ушёл 1 поток, то сокращать ничего не надо, начнём
+            if (needThread == statLastSec.getParkIn() && needThread > 1) {
                 needThread--;
             }
             for (int i = 0; i < needThread; i++) {
@@ -292,7 +293,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
 
     @Override
     public void iteration(WrapThread wrapThread, ThreadBalancer threadBalancer) { //Это то, что выполняется в каждом потоке пула балансировки
-        while (isIterationWrapThread(wrapThread)) {
+        while (isIteration(wrapThread)) {
             wrapThread.incCountIteration();
             long startTime = System.currentTimeMillis();
             if (idleInputTps) {
