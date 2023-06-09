@@ -45,7 +45,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     private Function<Integer, Integer> formulaRemoveResistancePrc = (need) -> need;
 
     @Setter
-    private volatile boolean correctTimeLag = true;
+    private volatile boolean wakeUp3Times = false;
 
     public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis) {
         this.setTpsMax(tpsMax);
@@ -97,9 +97,8 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
 
     @Override
     public void timeLag() { //Убирание секундного лага
-        //if (correctTimeLag && threadParkQueue.size() == threadList.size()) {
-        if (correctTimeLag && isIteration()) {
-            wakeUpOnceThreadLast();
+        if (wakeUp3Times && isIteration()) {
+            wakeUp();
         }
     }
 

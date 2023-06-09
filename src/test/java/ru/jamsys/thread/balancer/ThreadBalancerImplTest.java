@@ -30,7 +30,7 @@ class ThreadBalancerImplTest {
 
     @Test
     void resistanceSupplier() {
-        runSupplier(0, 250, 30000L, 15, 500, 50, clone -> Assertions.assertTrue(clone.tpsCalc > 290 && clone.tpsCalc < 300, "Должен выдавать 295 tps"));
+        runSupplier(0, 250, 30000L, 15, 500, 50, clone -> Assertions.assertTrue(clone.tpsCalc > 290 && clone.tpsCalc < 300, "Должен выдавать 295 tps"), false);
     }
 
     @Test
@@ -38,13 +38,13 @@ class ThreadBalancerImplTest {
         runSupplier(1, 10, 3000L, 15, 5, 0, clone -> {
             Assertions.assertTrue(clone.getInput() >= 4 && clone.getInput() <= 5, "Должен выдавать от 4 до 5 tps");
             Assertions.assertTrue(clone.getPool() >= 3, "Должен был разогнаться минимум в 3 потока"); // 1 поток может выдавать 2tps нам надо 5 => 3 потока минимум
-        });
+        }, false);
     }
 
     @Test
     void overTpsSupplier() {
         runSupplier(1, 20, 6000L, 15, 5, 0, clone ->
-                Assertions.assertTrue(clone.getOutput() >= 5, "Выходящих тпс должно быть больше либо равно 5"));
+                Assertions.assertTrue(clone.getOutput() >= 5, "Выходящих тпс должно быть больше либо равно 5"), true);
     }
 
     @Test
@@ -57,17 +57,18 @@ class ThreadBalancerImplTest {
             /*
             Не применимо, потому что под нагрузкой есть вероятность, что припаркованные потоки, снова возьмут в работу, считать такое не целесообразно
             Assertions.assertTrue(clone.getThreadCountPark() > 1 && clone.getThreadCountPark() <  5, "На парковке должно быть от 1 до 5 потоков");*/
-        });
+        }, false);
     }
 
     @SuppressWarnings("")
-    void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, int resistancePrc, Consumer<ThreadBalancerStatisticData> fnExpected) {
+    void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, int resistancePrc, Consumer<ThreadBalancerStatisticData> fnExpected, boolean wakeUp3Times) {
         Util.logConsole(Thread.currentThread(), "Start test");
         ThreadBalancerImpl supplierTest = App.context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive);
         supplierTest.setSupplier(() -> {
             Util.sleepMillis(500);
             return new MessageImpl();
         });
+        supplierTest.setWakeUp3Times(wakeUp3Times);
         supplierTest.setDebug(true);
         supplierTest.setResistancePrc(resistancePrc);
 
@@ -115,7 +116,6 @@ class ThreadBalancerImplTest {
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);
 
         ThreadBalancerImpl consumerTest = App.context.getBean(ThreadBalancerFactory.class).create("ConsumerTest", countThreadMin, countThreadMax, tpsMax, keepAliveMillis);
-        consumerTest.setCorrectTimeLag(false);
         consumerTest.setSupplier(() -> {
             Util.sleepMillis(1000);
             Message message = queue.pollLast();
