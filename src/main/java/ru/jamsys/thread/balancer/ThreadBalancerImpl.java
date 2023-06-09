@@ -155,7 +155,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     }
 
     @Override
-    public void wakeUpIfEveryoneIsSleeping() { //Пробудить одного если все спят
+    public void wakeUp() { //Пробудить одного если все спят
         if (isActive.get() && threadParkQueue.size() == threadList.size()) {
             wakeUpOnceThreadLast();
         }
