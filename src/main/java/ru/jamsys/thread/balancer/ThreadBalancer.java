@@ -25,6 +25,7 @@ public interface ThreadBalancer {
     @SuppressWarnings("unused")
     void setTestAutoRestoreResistanceTps(boolean status); //По умолчанию восстановление tps будет работать, метод только для тестов
 
+    @SuppressWarnings("unused")
     void wakeUpIfEveryoneIsSleeping(); //Пробудить одного спящего если вме сяп
 
 }

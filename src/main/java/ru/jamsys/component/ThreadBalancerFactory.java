@@ -46,9 +46,9 @@ public class ThreadBalancerFactory extends AbstractCoreComponent {
         return listThreadBalancer.get(name);
     }
 
-    public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis, boolean supplierIdleInputTps) {
+    public ThreadBalancerImpl create(String name, int countThreadMin, int countThreadMax, int tpsMax, long keepAliveMillis) {
         ThreadBalancerImpl threadBalancer = new ThreadBalancerImpl();
-        threadBalancer.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis, supplierIdleInputTps);
+        threadBalancer.configure(name, countThreadMin, countThreadMax, tpsMax, keepAliveMillis);
         listThreadBalancer.put(name, threadBalancer);
         return threadBalancer;
     }

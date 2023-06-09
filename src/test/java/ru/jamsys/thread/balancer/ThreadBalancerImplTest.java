@@ -30,7 +30,7 @@ class ThreadBalancerImplTest {
 
     @Test
     void resistanceSupplier() {
-        runSupplier(0, 250, 30000L, 15, 500, 50, clone -> Assertions.assertTrue(clone.resistance > 290 && clone.resistance < 300, "Должен выдавать 295 tps"));
+        runSupplier(0, 250, 30000L, 15, 500, 50, clone -> Assertions.assertTrue(clone.tpsCalc > 290 && clone.tpsCalc < 300, "Должен выдавать 295 tps"));
     }
 
     @Test
@@ -63,7 +63,7 @@ class ThreadBalancerImplTest {
     @SuppressWarnings("")
     void runSupplier(int countThreadMin, int countThreadMax, long keepAlive, int timeTestSec, int maxTps, int resistancePrc, Consumer<ThreadBalancerStatisticData> fnExpected) {
         Util.logConsole(Thread.currentThread(), "Start test");
-        ThreadBalancerImpl supplierTest = App.context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive, true);
+        ThreadBalancerImpl supplierTest = App.context.getBean(ThreadBalancerFactory.class).create("SupplierTest", countThreadMin, countThreadMax, maxTps, keepAlive);
         supplierTest.setSupplier(() -> {
             Util.sleepMillis(500);
             return new MessageImpl();
@@ -114,7 +114,7 @@ class ThreadBalancerImplTest {
         ConcurrentLinkedDeque<Message> queue = new ConcurrentLinkedDeque<>();
         AtomicInteger serviceHandleCounter = new AtomicInteger(0);
 
-        ThreadBalancerImpl consumerTest = App.context.getBean(ThreadBalancerFactory.class).create("ConsumerTest", countThreadMin, countThreadMax, tpsMax, keepAliveMillis, false);
+        ThreadBalancerImpl consumerTest = App.context.getBean(ThreadBalancerFactory.class).create("ConsumerTest", countThreadMin, countThreadMax, tpsMax, keepAliveMillis);
         consumerTest.setCorrectTimeLag(false);
         consumerTest.setSupplier(() -> {
             Util.sleepMillis(1000);

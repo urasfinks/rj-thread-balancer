@@ -23,7 +23,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     protected final int statisticListSize = 10; //Агрегация статистики кол-во секунд (по умолчанию 10 должно быть)
     protected long threadKeepAlive; //Время жизни потока без работы
 
-    protected final AtomicInteger tpsMax = new AtomicInteger(1); //Максимальное кол-во выданных massage Supplier от всего пула потоков, это величина к которой будет стремиться пул, но из-за задежек Supplier может постоянно колебаться
+    protected final AtomicInteger tpsMax = new AtomicInteger(1); //Максимальное кол-во оборотов блока iteration
     protected final ConcurrentLinkedDeque<WrapThread> threadParkQueue = new ConcurrentLinkedDeque<>(); //Очередь припаркованных потоков
     protected final AtomicInteger tpsIdle = new AtomicInteger(0); //Счётчик холостого оборота iteration не зависимо вернёт supplier сообщение или нет
     protected final AtomicInteger tpsInput = new AtomicInteger(0); //Счётчик вернувшик сообщение supplier
@@ -35,14 +35,14 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     protected final ThreadBalancerStatisticData statLastSec = new ThreadBalancerStatisticData(); //Агрегированная статистика за прошлый период (сейчас 1 секунда)
     protected final List<ThreadBalancerStatisticData> statList = new ArrayList<>();
     protected final ConcurrentLinkedDeque<Long> timeTransactionQueue = new ConcurrentLinkedDeque<>(); // Статистика времени транзакций, для расчёта создания новых или пробуждения припаркованных потоков
-    protected final AtomicInteger threadCountMin = new AtomicInteger(1); //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опустится ниже
+    protected final AtomicInteger threadCountMin = new AtomicInteger(1); //Минимальное кол-во потоков, которое создаётся при старте и в процессе работы не сможет опуститься ниже
     protected final AtomicInteger threadCountMax = new AtomicInteger(1); //Максимальное кол-во потоков, которое может создать балансировщик
     protected final List<WrapThread> threadList = new CopyOnWriteArrayList<>(); //Список всех потоков
     protected final AtomicBoolean isActive = new AtomicBoolean(false); //Флаг активности текущего балансировщика
     protected final AtomicBoolean autoRestoreResistanceTps = new AtomicBoolean(true); //Автоматическое снижение сопротивления (авто коррекция на прежний уровень)
 
-    protected int resistancePercent = 0; //Процент сопротивления, которое могут выставлять внешние компаненты системы (просьба сбавить обороты)
-    protected final AtomicInteger tpsResistance = new AtomicInteger(0); //Tps сопротивления
+    protected int resistancePercent = 0; //Процент сопротивления, которое могут выставлять внешние компоненты системы (просьба сбавить обороты)
+    protected final AtomicInteger tpsCalc = new AtomicInteger(0); //Tps рассчитанное с учётом сопротивления
     protected final ConcurrentLinkedQueue<Integer> listResistanceRequest = new ConcurrentLinkedQueue<>();
 
     @Nullable
@@ -138,7 +138,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
         statLastSec.setRun(getActiveThreadStatistic());
         statLastSec.setOneThreadTps(getTpsPerThread());
         statLastSec.setAdd(tpsThreadAdd.getAndSet(0));
-        statLastSec.setResistance(tpsResistance.get());
+        statLastSec.setTpsCalc(tpsCalc.get());
 
         statLastSec.setTimeTransaction(timeTransactionQueue);
         timeTransactionQueue.clear();
@@ -158,7 +158,7 @@ public abstract class ThreadBalancerStatistic implements ThreadBalancer {
     }
 
     public boolean isIteration() {
-        return isActive.get() && tpsInput.get() < tpsResistance.get() && tpsOutput.get() < tpsResistance.get();
+        return isActive.get() && tpsInput.get() < tpsCalc.get() && tpsOutput.get() < tpsCalc.get();
     }
 
     @Override

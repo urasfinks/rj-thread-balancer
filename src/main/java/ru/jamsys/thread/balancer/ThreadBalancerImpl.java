@@ -33,8 +33,6 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     @Getter
     private String name; //Имя балансировщика - будет отображаться в пуле jmx
 
-    private boolean idleInputTps = true; //Считать холостую отработку поставщика как успешную входящий TPS
-
     private final AtomicInteger threadNameCounter = new AtomicInteger(0); //Индекс создаваемого потока, что бы всё красиво было в jmx
 
     @Setter
@@ -49,8 +47,7 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
     @Setter
     private volatile boolean correctTimeLag = true;
 
-    public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis, boolean supplierIdleInputTps) {
-        this.idleInputTps = supplierIdleInputTps;
+    public void configure(String name, int threadCountMin, int threadCountMax, int tpsMax, long threadKeepAliveMillis) {
         this.setTpsMax(tpsMax);
         if (isActive.compareAndSet(false, true)) {
             this.name = name;
@@ -89,9 +86,9 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
                 resistancePercent -= formulaRemoveResistancePrc.apply(1);
             }
             if (resistancePercent > 0) {
-                tpsResistance.set((100 - resistancePercent) * tpsMax.get() / 100);
+                tpsCalc.set((100 - resistancePercent) * tpsMax.get() / 100);
             } else {
-                tpsResistance.set(tpsMax.get());
+                tpsCalc.set(tpsMax.get());
             }
         } else {
             Util.logConsole(Thread.currentThread(), "threadStabilizer() ThreadBalancer not active");
@@ -303,16 +300,10 @@ public class ThreadBalancerImpl extends ThreadBalancerStatistic implements Threa
         while (isIteration(wrapThread)) {
             wrapThread.incCountIteration();
             long startTime = System.currentTimeMillis();
-            if (idleInputTps) {
-                tpsInput.incrementAndGet();
-            }
+            tpsInput.incrementAndGet();
             Message message = supplier.get();
             if (message != null) {
-                if (idleInputTps) {
-                    message.onHandle(MessageHandle.CREATE, this);
-                } else {
-                    tpsInput.incrementAndGet();
-                }
+                message.onHandle(MessageHandle.ON_RECEIVE, this);
                 consumer.accept(message);
                 timeTransactionQueue.add(System.currentTimeMillis() - startTime);
                 tpsOutput.incrementAndGet();
